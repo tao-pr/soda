@@ -42,4 +42,5 @@ lazy val `soda-benchmark` = project.in(file("soda-benchmark"))
     )
   )
 
+// Doesn't work with sbt console -> "run" or "runMain"
 mainClass / run := Some("de.tao.soda.Main")
