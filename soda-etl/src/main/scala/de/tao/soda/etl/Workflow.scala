@@ -1,6 +1,6 @@
 package de.tao.soda.etl
 
-trait Workflow[T1, T2] extends Serializable {
+trait Workflow[T1, T2] extends Serializable with Loggable {
   def run(input: T1, dry: Boolean=false): T2
 }
 
@@ -19,10 +19,4 @@ trait Multiplexer[T0, T1, T2] extends Workflow[T0, T1] {
     val outPlex: T2 = plex.run(input, dry)
     outSelf
   }
-}
-
-object Workflow {
-  // TODO:
-
-  def fromFile(file: String): Workflow[_, _] = ???
 }
