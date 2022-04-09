@@ -8,7 +8,7 @@ trait Help {
         |Instruction
         |----------------------
         |soda-cli can be run with following arguments
-        |-cp soda-cli -do:{CMD} -p:{PATH} -o:{OUTPUT}
+        |-cp soda-cli -do:{CMD} -p:{PATH} -o:{OUTPUT} --debug
         |""".stripMargin)
   }
 }

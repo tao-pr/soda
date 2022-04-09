@@ -18,13 +18,25 @@ lazy val root = Project("soda", file("."))
     name := "soda"
   )
   .aggregate(
-    `soda-cli`
+    `soda-cli`,
+    `soda-etl`
   )
 
 lazy val `soda-cli` = project.in(file("soda-cli"))
   .settings(
     libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-core" % "3.2.1"
+      "org.apache.spark" %% "spark-core" % sparkVersion,
+      "org.log4s" %% "log4s" % log4sVersion
+    )
+  )
+  .dependsOn(`soda-etl`)
+
+lazy val `soda-etl` = project.in(file("soda-etl"))
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.apache.spark" %% "spark-core" % sparkVersion,
+      "org.apache.spark" %% "spark-sql" % sparkVersion,
+      "org.log4s" %% "log4s" % log4sVersion
     )
   )
 
