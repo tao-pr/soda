@@ -1,6 +1,8 @@
 package de.tao.soda.etl
 
-trait Workflow[T1, T2] extends Serializable with Loggable {
+import com.typesafe.scalalogging.LazyLogging
+
+trait Workflow[T1, T2] extends Serializable with LazyLogging {
   def run(input: T1, dry: Boolean=false): T2
 }
 

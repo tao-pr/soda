@@ -23,7 +23,6 @@ private object ConfigParams {
 }
 
 object Main extends App with Help {
-  val logger = org.log4s.getLogger
   val argPool = if (args.size == 0) Set.empty[String] else args.toSet
 
   lazy val isDebug = argPool.contains("--debug")

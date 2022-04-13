@@ -7,7 +7,7 @@ import java.io.InputStream
 trait DataReader[T] extends Workflow[String, T]
 trait DataWriter[T] extends Workflow[T, String]
 trait DataIntercept[T] extends Workflow[T, T] {
-  def intercept(data: T)
+  def intercept(data: T): Unit
   override def run(input: T, dry: Boolean): T = {
     intercept(input)
     input

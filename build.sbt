@@ -24,19 +24,18 @@ lazy val root = Project("soda", file("."))
 
 lazy val `soda-cli` = project.in(file("soda-cli"))
   .settings(
-    libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-core" % sparkVersion,
-      "org.log4s" %% "log4s" % log4sVersion
-    )
+    libraryDependencies ++= Seq.empty
   )
   .dependsOn(`soda-etl`)
 
+val slf4jBinding = ExclusionRule(organization = "org.slf4j")
 lazy val `soda-etl` = project.in(file("soda-etl"))
   .settings(
     libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-core" % sparkVersion,
-      "org.apache.spark" %% "spark-sql" % sparkVersion,
-      "org.log4s" %% "log4s" % log4sVersion
+      sparkCore excludeAll(slf4jBinding),
+      sparkSql excludeAll(slf4jBinding),
+      scalaLogging,
+      logback
     )
   )
 
@@ -53,6 +52,8 @@ lazy val `soda-benchmark` = project.in(file("soda-benchmark"))
       "org.openjdk.jmh" % "jmh-generator-reflection" % JmhVersion
     )
   )
+
+resolvers += "Apache Snapshot Repository" at "https://repository.apache.org/snapshots"
 
 // Doesn't work with sbt console -> "run" or "runMain"
 mainClass / run := Some("de.tao.soda.Main")

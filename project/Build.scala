@@ -9,7 +9,11 @@ object Build extends AutoPlugin {
     val SbtJmhVersion = "0.3.7"
     val JmhVersion = "1.34"
     val sparkVersion = "3.2.1"
-    val log4sVersion =  "1.10.0"
+
+    val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
+    val logback = "ch.qos.logback" % "logback-classic" % "1.2.10"
+    val sparkCore =  "org.apache.spark" %% "spark-core" % sparkVersion
+    val sparkSql =  "org.apache.spark" %% "spark-sql" % sparkVersion
   }
 
   import autoImport._
@@ -25,7 +29,6 @@ object Build extends AutoPlugin {
     javacOptions := Seq("-source", "1.17", "-target", "1.17"),
     libraryDependencies ++= Seq(
       "org.scala-lang"    % "scala3-compiler_3" % scalaVersion.value,
-      "org.log4s"         % "log4s"             % log4sVersion,
       "org.scalatest"     % "scalatest_3"       % ScalatestVersion      % "test"
     )
   )
