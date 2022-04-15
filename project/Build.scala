@@ -9,11 +9,15 @@ object Build extends AutoPlugin {
     val SbtJmhVersion = "0.3.7"
     val JmhVersion = "1.34"
     val sparkVersion = "3.2.1"
+    val jacksonVersion = "2.13.2"
 
+    val jacksonModule = "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
+    val logback = "ch.qos.logback" % "logback-classic" % "1.2.11"
+    val pureCSV = "io.kontainers" %% "purecsv" % "1.3.10"
     val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
-    val logback = "ch.qos.logback" % "logback-classic" % "1.2.10"
     val sparkCore =  "org.apache.spark" %% "spark-core" % sparkVersion
     val sparkSql =  "org.apache.spark" %% "spark-sql" % sparkVersion
+
   }
 
   import autoImport._

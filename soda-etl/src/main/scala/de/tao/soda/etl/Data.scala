@@ -1,5 +1,6 @@
 package de.tao.soda.etl
 
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.spark.sql.DataFrame
 
 import java.io.InputStream
@@ -32,10 +33,3 @@ extends DataPeek[DataFrame](title, numRecords, isOn) {
   }
 }
 
-case class StreamPeek(title: String, numRecords: Option[Int]=None, isOn: Boolean=true)
-extends DataPeek[InputStream](title, numRecords, isOn){
-  override protected def peek(data: InputStream): Unit = {
-    // TODO: clone stream to bytestream array
-    ???
-  }
-}

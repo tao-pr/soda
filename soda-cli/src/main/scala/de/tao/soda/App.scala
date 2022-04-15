@@ -37,7 +37,7 @@ object Main extends App with Help {
 
   cmd match {
     case Some("help") | None => printHelp
-    case Some("wget") =>
+    case Some("wget") => // download arbitrary file or zip
       for {
         url <- path
         localOutput <- output

@@ -35,7 +35,9 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       sparkCore excludeAll(slf4jBinding),
       sparkSql excludeAll(slf4jBinding),
       scalaLogging,
-      logback
+      logback,
+      pureCSV,
+      jacksonModule
     )
   )
 
@@ -54,6 +56,7 @@ lazy val `soda-benchmark` = project.in(file("soda-benchmark"))
   )
 
 resolvers += "Apache Snapshot Repository" at "https://repository.apache.org/snapshots"
+resolvers += Resolver.sonatypeRepo("releases")
 
 // Doesn't work with sbt console -> "run" or "runMain"
 mainClass / run := Some("de.tao.soda.Main")
