@@ -37,7 +37,9 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       scalaLogging,
       logback,
       pureCSV,
-      jacksonModule
+      jacksonModule,
+      scalaTest,
+      scalaTestLactic
     )
   )
 

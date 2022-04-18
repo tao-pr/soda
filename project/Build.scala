@@ -10,6 +10,7 @@ object Build extends AutoPlugin {
     val JmhVersion = "1.34"
     val sparkVersion = "3.2.1"
     val jacksonVersion = "2.13.2"
+    val scalaTestVersion = "3.2.11"
 
     val jacksonModule = "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
     val logback = "ch.qos.logback" % "logback-classic" % "1.2.11"
@@ -17,6 +18,8 @@ object Build extends AutoPlugin {
     val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
     val sparkCore =  "org.apache.spark" %% "spark-core" % sparkVersion
     val sparkSql =  "org.apache.spark" %% "spark-sql" % sparkVersion
+    val scalaTestLactic = "org.scalactic" %% "scalactic" % scalaTestVersion
+    val scalaTest = "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
 
   }
 
