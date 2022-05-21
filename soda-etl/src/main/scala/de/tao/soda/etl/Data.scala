@@ -4,8 +4,34 @@ import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.spark.sql.DataFrame
 
 import java.io.InputStream
+import scala.io.{BufferedSource, Source}
 
-trait DataReader[T] extends Workflow[String, T]
+sealed trait InputIdentifier
+sealed trait BufferedInputIdentifier
+
+case class PathIdentifier(s: String, encoding: Option[String]=None) extends InputIdentifier
+case class SourceIdentifier(s: BufferedSource) extends InputIdentifier
+
+private[etl] object ToSource {
+  def apply(ii: InputIdentifier): BufferedSource = ii match {
+    case PathIdentifier(s, None) => scala.io.Source.fromFile(s)
+    case PathIdentifier(s, Some(e)) => scala.io.Source.fromFile(s, e)
+    case SourceIdentifier(s) => s
+  }
+}
+
+object Implicits {
+  implicit class StringImpl(val s: String) extends AnyVal {
+    def lift = PathIdentifier(s)
+  }
+  implicit class SourceImpl(val s: BufferedSource) extends AnyVal {
+    def lift = SourceIdentifier(s)
+  }
+}
+
+
+trait DataReader[T] extends Workflow[InputIdentifier, T]
+trait DataLoader[T] extends Workflow[String, T]
 trait DataWriter[T] extends Workflow[T, String]
 trait DataIntercept[T] extends Workflow[T, T] {
   def intercept(data: T): Unit

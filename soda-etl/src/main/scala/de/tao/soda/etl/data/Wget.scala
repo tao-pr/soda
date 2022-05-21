@@ -1,25 +1,25 @@
 package de.tao.soda.etl.data
 
-import de.tao.soda.etl.DataReader
+import de.tao.soda.etl.{DataLoader, DataReader}
 import org.apache.commons.io.FileExistsException
 
 import java.io.{File, FileOutputStream, InputStream}
 import java.net.URL
 import java.util.zip.ZipInputStream
 
-case object WgetStream extends DataReader[InputStream] {
+case object WgetStream extends DataLoader[InputStream] {
   override def run(input: String, dry: Boolean): InputStream = {
     new URL(input).openStream()
   }
 }
 
-case object WgetZippedStream extends DataReader[InputStream] {
+case object WgetZippedStream extends DataLoader[InputStream] {
   override def run(input: String, dry: Boolean): InputStream = {
     new ZipInputStream(new URL(input).openStream())
   }
 }
 
-class WgetToFile(toPath: String, append: Boolean=false, existsOk: Boolean=true) extends DataReader[String] {
+class WgetToFile(toPath: String, append: Boolean=false, existsOk: Boolean=true) extends DataLoader[String] {
   override def run(input: String, dry: Boolean): String = {
     if (!existsOk && new File(toPath).exists()){
       throw new FileExistsException(s"File ${toPath} already exists. Download aborted")
@@ -43,7 +43,7 @@ class WgetToFile(toPath: String, append: Boolean=false, existsOk: Boolean=true) 
   }
 }
 
-class WgetZippedToFiles(toPath: String) extends DataReader[String] {
+class WgetZippedToFiles(toPath: String) extends DataLoader[String] {
   override def run(input: String, dry: Boolean): String = {
     val outDir = new File(toPath)
     val ins = new ZipInputStream(new URL(input).openStream())
