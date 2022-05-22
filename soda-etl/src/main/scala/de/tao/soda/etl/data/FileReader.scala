@@ -2,7 +2,7 @@ package de.tao.soda.etl.data
 
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import de.tao.soda.etl.{DataReader, InputIdentifier, PathIdentifier, ToSource}
+import de.tao.soda.etl.{DataReader, InputIdentifier, PathIdentifier, SourceIdentifier, ToSource}
 import purecsv.unsafe.converter.RawFieldsConverter
 import purecsv.unsafe._
 
@@ -70,11 +70,13 @@ class JSONReader[T <: Product with Serializable](implicit clazz: Class[T]) exten
     }
     else {
       logger.info(s"JSONReader reading $clazz.getName} from $input")
-      val file = input match {
-        case PathIdentifier(s, encoding) => new java.io.File(s)
-        case a => throw new UnsupportedOperationException(s"JSONReader expects path string input, got : ${a.getClass.getName} instead")
+      val parsed: T = input match {
+        case PathIdentifier(s, encoding) =>
+          mapper.readValue[T](new java.io.File(s), clazz)
+        case SourceIdentifier(s) =>
+          val content = s.getLines().mkString(" ")
+          mapper.readValue[T](content, clazz)
       }
-      val parsed: T = mapper.readValue[T](file, clazz)
       Some(parsed)
     }
   }
