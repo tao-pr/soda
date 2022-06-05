@@ -45,11 +45,11 @@ case class CSVFileReader[T <: Product with Serializable](delimiter: Char)
 (implicit val classTag: ClassTag[T], val converter: RawFieldsConverter[T]) extends DataReader[Iterator[T]]{
   override def run(input: InputIdentifier, dry: Boolean) = {
     if (dry){
-      logger.info(s"CSVFileReader to read ${classTag.getClass.getName} from $input with delimiter=$delimiter")
+      logger.info(s"CSVFileReader to read ${classTag} from $input with delimiter=$delimiter")
       Iterator.empty[T]
     }
     else {
-      logger.info(s"CSVFileReader reading ${classTag.getClass.getName} from $input with delimiter=$delimiter")
+      logger.info(s"CSVFileReader reading ${classTag} from $input with delimiter=$delimiter")
       val streamReader = ToSource(input).reader()
       val iter = CSVReader[T].readCSVFromReader(streamReader, delimiter)
       //streamReader.close()
@@ -69,7 +69,7 @@ class JSONReader[T <: Product with Serializable](implicit clazz: Class[T]) exten
       None
     }
     else {
-      logger.info(s"JSONReader reading $clazz.getName} from $input")
+      logger.info(s"JSONReader reading ${clazz.getName} from $input")
       val parsed: T = input match {
         case PathIdentifier(s, encoding) =>
           mapper.readValue[T](new java.io.File(s), clazz)
