@@ -2,12 +2,12 @@ package de.tao.soda.etl.data
 
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import de.tao.soda.etl.{DataReader, DataWriter}
-import purecsv.unsafe.converter.RawFieldsConverter
+import de.tao.soda.etl.DataWriter
 import purecsv.unsafe._
-import shapeless.HList
+import purecsv.unsafe.converter.RawFieldsConverter
 
-import java.io.{BufferedWriter, File, FileOutputStream, FileWriter, ObjectOutputStream}
+import java.io._
+import java.util.zip.{GZIPOutputStream, ZipOutputStream}
 
 case class CSVFileWriter[T <: Product with Serializable](filename: String, delimiter: Char)
   (implicit val rc: RawFieldsConverter[T])
@@ -78,6 +78,23 @@ case class ObjectWriter[T <: Product with Serializable](filename: String) extend
     else{
       logger.info(s"ObjectWriter writing to $filename")
       val writer = new ObjectOutputStream(new FileOutputStream(filename))
+      writer.writeObject(input)
+      writer.close()
+      filename
+    }
+  }
+}
+
+case class ObjectZippedWriter[T <: Product with Serializable](filename: String) extends DataWriter[T]{
+  override def run(input: T, dry: Boolean): String = {
+    if (dry){
+      logger.info(s"ObjectZippedWriter to write to $filename")
+      filename
+    }
+    else{
+      logger.info(s"ObjectZippedWriter writing to $filename")
+      val gzip = new GZIPOutputStream(new FileOutputStream(filename))
+      val writer = new ObjectOutputStream(gzip)
       writer.writeObject(input)
       writer.close()
       filename

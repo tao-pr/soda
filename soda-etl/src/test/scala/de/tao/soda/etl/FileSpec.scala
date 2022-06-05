@@ -1,6 +1,6 @@
 package de.tao.soda.etl
 
-import de.tao.soda.etl.data.{CSVFileReader, JSONReader, ObjectReader, ObjectWriter}
+import de.tao.soda.etl.data.{CSVFileReader, JSONReader, ObjectReader, ObjectWriter, ObjectZippedReader, ObjectZippedWriter}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -12,6 +12,7 @@ case class CSVData(id: Int, name: String, occupation: String, subscribed: Boolea
 case class H1(title: String, id: Int, p: Option[String])
 case class B1(s: List[Int])
 case class JSONData(header: H1, body: B1, b: Boolean)
+case class JSONList(arr: Array[JSONData])
 
 class FileSpec extends AnyFlatSpec with BeforeAndAfter {
 
@@ -42,22 +43,43 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "write an object to file" in {
-    val src = JSONData(H1("title", 325, Some("thing")), B1(List(1,2,3)), false)
+    val src = JSONList(Array.fill(5100)(JSONData(H1("title", scala.util.Random.nextInt(), Some("thing")), B1(List.fill(100)(1)), false)))
 
     // serialise
     val tempFile = java.io.File.createTempFile("sodatest", "jsondata")
-    val serialiser = ObjectWriter[JSONData](tempFile.getAbsolutePath)
+    val serialiser = ObjectWriter[JSONList](tempFile.getAbsolutePath)
     serialiser.run(src, false)
 
     // deserialiser
-    val deserialiser = new ObjectReader[JSONData]
+    val deserialiser = new ObjectReader[JSONList]
     val destOpt = deserialiser.run(PathIdentifier(tempFile.getAbsolutePath))
     assert(destOpt.isDefined)
-    assert(destOpt.get.header.title == "title")
-    assert(destOpt.get.header.p == Some("thing"))
-    assert(destOpt.get.header.id == 325)
-    assert(destOpt.get.b == false)
-    assert(destOpt.get.body.s == List(1,2,3))
+    assert(destOpt.get.arr.size == 5100)
+    assert(destOpt.get.arr.head.header.title == "title")
+    assert(destOpt.get.arr.head.header.p == Some("thing"))
+    assert(destOpt.get.arr.head.b == false)
+    assert(destOpt.get.arr.head.body.s.size == 100)
+
+    tempFile.delete()
+  }
+
+  it should "write an object to a zip file" in {
+    val src = JSONList(Array.fill(5100)(JSONData(H1("title", scala.util.Random.nextInt(), Some("thing")), B1(List.fill(100)(1)), false)))
+
+    // serialise
+    val tempFile = java.io.File.createTempFile("sodatest", "jsonzipped")
+    val serialiser = ObjectZippedWriter[JSONList](tempFile.getAbsolutePath)
+    serialiser.run(src, false)
+
+    // deserialiser
+    val deserialiser = new ObjectZippedReader[JSONList]
+    val destOpt = deserialiser.run(PathIdentifier(tempFile.getAbsolutePath))
+    assert(destOpt.isDefined)
+    assert(destOpt.get.arr.size == 5100)
+    assert(destOpt.get.arr.head.header.title == "title")
+    assert(destOpt.get.arr.head.header.p == Some("thing"))
+    assert(destOpt.get.arr.head.b == false)
+    assert(destOpt.get.arr.head.body.s.size == 100)
 
     tempFile.delete()
   }

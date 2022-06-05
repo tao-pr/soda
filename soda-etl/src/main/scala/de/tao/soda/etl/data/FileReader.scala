@@ -6,7 +6,8 @@ import de.tao.soda.etl._
 import purecsv.unsafe._
 import purecsv.unsafe.converter.RawFieldsConverter
 
-import java.io.{ByteArrayInputStream, FileInputStream, ObjectInputStream, OutputStreamWriter}
+import java.io.{ByteArrayInputStream, File, FileInputStream, ObjectInputStream, OutputStreamWriter}
+import java.util.zip.GZIPInputStream
 import scala.reflect.ClassTag
 
 
@@ -91,6 +92,8 @@ class ObjectReader[T <: Product with Serializable] extends DataReader[Option[T]]
       logger.info(s"ObjectReader reading from $input")
       input match {
         case PathIdentifier(s, _) =>
+          val filesize = new File(s).length()
+          logger.info(s"ObjectReader reading ${filesize} bytes from file")
           val reader = new ObjectInputStream(new FileInputStream(s))
           val data = Option(reader.readObject().asInstanceOf[T])
           reader.close()
@@ -101,6 +104,39 @@ class ObjectReader[T <: Product with Serializable] extends DataReader[Option[T]]
           val bytes = LazyList.continually(sreader.read).takeWhile(_ != -1).map(_.toByte).toArray
           logger.info(s"ObjectReader reading ${bytes.length} bytes from file")
           val reader = new ObjectInputStream(new ByteArrayInputStream(bytes))
+          val data = Option(reader.readObject().asInstanceOf[T])
+          sreader.close()
+          reader.close()
+          data
+      }
+    }
+  }
+}
+
+class ObjectZippedReader[T <: Product with Serializable] extends DataReader[Option[T]]{
+  override def run(input: InputIdentifier, dry: Boolean): Option[T] = {
+    if (dry){
+      logger.info(s"ObjectZippedReader to read from $input")
+      None
+    }
+    else {
+      logger.info(s"ObjectZippedReader reading from $input")
+      input match {
+        case PathIdentifier(s, _) =>
+          val filesize = new File(s).length()
+          logger.info(s"ObjectZippedReader reading ${filesize} bytes from file")
+          val gzip = new GZIPInputStream(new FileInputStream(s))
+          val reader = new ObjectInputStream(gzip)
+          val data = Option(reader.readObject().asInstanceOf[T])
+          reader.close()
+          data
+
+        case SourceIdentifier(s) =>
+          val sreader = s.reader()
+          val bytes = LazyList.continually(sreader.read).takeWhile(_ != -1).map(_.toByte).toArray
+          logger.info(s"ObjectZippedReader reading ${bytes.length} bytes from file")
+          val gzip = new GZIPInputStream(new ByteArrayInputStream(bytes))
+          val reader = new ObjectInputStream(gzip)
           val data = Option(reader.readObject().asInstanceOf[T])
           sreader.close()
           reader.close()
