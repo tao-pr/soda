@@ -3,7 +3,7 @@ package de.tao.soda.etl
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.spark.sql.DataFrame
 
-import java.io.InputStream
+import java.io.{FileInputStream, InputStream}
 import scala.io.{BufferedSource, Source}
 
 sealed trait InputIdentifier
@@ -32,6 +32,7 @@ object Implicits {
 
 trait DataReader[T] extends Workflow[InputIdentifier, T]
 trait DataLoader[T] extends Workflow[String, T]
+trait DataDumper[T] extends Workflow[T, String]
 trait DataWriter[T] extends Workflow[T, String]
 trait DataIntercept[T] extends Workflow[T, T] {
   def intercept(data: T): Unit

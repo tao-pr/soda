@@ -1,6 +1,6 @@
 package de.tao.soda.etl
 
-import de.tao.soda.etl.data.{CSVFileReader, JSONReader}
+import de.tao.soda.etl.data.{CSVFileReader, JSONReader, ObjectReader, ObjectWriter}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -39,5 +39,26 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
     assert(json.get.header.title == "foobar")
     assert(json.get.body.s == List(0,0,1,0,5))
     assert(json.get.b == true)
+  }
+
+  it should "write an object to file" in {
+    val src = JSONData(H1("title", 325, Some("thing")), B1(List(1,2,3)), false)
+
+    // serialise
+    val tempFile = java.io.File.createTempFile("sodatest", "jsondata")
+    val serialiser = ObjectWriter[JSONData](tempFile.getAbsolutePath)
+    serialiser.run(src, false)
+
+    // deserialiser
+    val deserialiser = new ObjectReader[JSONData]
+    val destOpt = deserialiser.run(PathIdentifier(tempFile.getAbsolutePath))
+    assert(destOpt.isDefined)
+    assert(destOpt.get.header.title == "title")
+    assert(destOpt.get.header.p == Some("thing"))
+    assert(destOpt.get.header.id == 325)
+    assert(destOpt.get.b == false)
+    assert(destOpt.get.body.s == List(1,2,3))
+
+    tempFile.delete()
   }
 }

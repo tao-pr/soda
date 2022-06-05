@@ -2,12 +2,11 @@ package de.tao.soda.etl.data
 
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import de.tao.soda.etl.{DataReader, InputIdentifier, PathIdentifier, SourceIdentifier, ToSource}
-import purecsv.unsafe.converter.RawFieldsConverter
+import de.tao.soda.etl._
 import purecsv.unsafe._
+import purecsv.unsafe.converter.RawFieldsConverter
 
-import java.io.InputStream
-import scala.io.{BufferedSource, Source}
+import java.io.{ByteArrayInputStream, FileInputStream, ObjectInputStream, OutputStreamWriter}
 import scala.reflect.ClassTag
 
 
@@ -59,7 +58,7 @@ case class CSVFileReader[T <: Product with Serializable](delimiter: Char)
 }
 
 class JSONReader[T <: Product with Serializable](implicit clazz: Class[T]) extends DataReader[Option[T]]{
-  val mapper: JsonMapper = JsonMapper.builder()
+  lazy val mapper: JsonMapper = JsonMapper.builder()
     .addModule(DefaultScalaModule)
     .build()
 
@@ -79,5 +78,41 @@ class JSONReader[T <: Product with Serializable](implicit clazz: Class[T]) exten
       }
       Some(parsed)
     }
+  }
+}
+
+class ObjectReader[T <: Product with Serializable] extends DataReader[Option[T]]{
+  override def run(input: InputIdentifier, dry: Boolean): Option[T] = {
+    if (dry){
+      logger.info(s"ObjectReader to read from $input")
+      None
+    }
+    else {
+      logger.info(s"ObjectReader reading from $input")
+      input match {
+        case PathIdentifier(s, _) =>
+          val reader = new ObjectInputStream(new FileInputStream(s))
+          val data = Option(reader.readObject().asInstanceOf[T])
+          reader.close()
+          data
+
+        case SourceIdentifier(s) =>
+          val sreader = s.reader()
+          val bytes = LazyList.continually(sreader.read).takeWhile(_ != -1).map(_.toByte).toArray
+          logger.info(s"ObjectReader reading ${bytes.length} bytes from file")
+          val reader = new ObjectInputStream(new ByteArrayInputStream(bytes))
+          val data = Option(reader.readObject().asInstanceOf[T])
+          sreader.close()
+          reader.close()
+          data
+      }
+    }
+  }
+}
+
+final object ObjectReader {
+  def loadFromFile[T <: Product with Serializable](filename: String): Option[T] = {
+    val input = PathIdentifier(filename)
+    new ObjectReader[T].run(input)
   }
 }
