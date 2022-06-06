@@ -1,6 +1,6 @@
 package de.tao.soda.etl.workflow
 
-import de.tao.soda.etl.{Multiplexer, Workflow}
+import de.tao.soda.etl.Workflow
 
 /**
  * MapIter maps an iterable with a mapping function

@@ -1,10 +1,9 @@
 package de.tao.soda.etl.data
 
-import de.tao.soda.etl.{DataLoader, DataReader, Generator, InputIdentifier}
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.{AmazonS3Exception, Bucket, S3Object, S3ObjectSummary}
+import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import com.amazonaws.services.s3.model.{AmazonS3Exception, S3Object, S3ObjectSummary}
+import de.tao.soda.etl.{DataLoader, Generator}
 
 import java.io.ObjectInputStream
 import java.util

@@ -1,6 +1,6 @@
 package de.tao.soda.etl.data
 
-import de.tao.soda.etl.{DataLoader, DataReader}
+import de.tao.soda.etl.DataLoader
 import org.apache.commons.io.FileExistsException
 
 import java.io.{File, FileOutputStream, InputStream}

@@ -1,10 +1,8 @@
 package de.tao.soda.etl
 
-import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.spark.sql.DataFrame
 
-import java.io.{FileInputStream, InputStream}
-import scala.io.{BufferedSource, Source}
+import scala.io.BufferedSource
 
 sealed trait InputIdentifier
 sealed trait BufferedInputIdentifier
