@@ -34,7 +34,7 @@ trait DataReader[T] extends Workflow[InputIdentifier, T]
 trait DataLoader[T] extends Workflow[String, T]
 trait DataDumper[T] extends Workflow[T, String]
 trait DataWriter[T] extends Workflow[T, String]
-trait DataIntercept[T] extends Workflow[T, T] {
+trait DataIntercept[T] extends IsoWorkflow[T] {
   def intercept(data: T): Unit
   override def run(input: T, dry: Boolean): T = {
     intercept(input)
