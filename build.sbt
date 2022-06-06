@@ -28,6 +28,7 @@ lazy val `soda-cli` = project.in(file("soda-cli"))
   )
   .dependsOn(`soda-etl`)
 
+// NOTE: avoid collision of implementations of log4s
 val slf4jBinding = ExclusionRule(organization = "org.slf4j")
 lazy val `soda-etl` = project.in(file("soda-etl"))
   .settings(
@@ -38,6 +39,7 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       logback,
       pureCSV,
       jacksonModule,
+      aws,
       scalaTest,
       scalaTestLactic
     )
