@@ -1,0 +1,11 @@
+{
+  "b": true,
+  "header": {
+    "title": "foobar",
+    "id": 12334,
+    "p": null
+  },
+  "body": {
+    "s": [0,0,1,0,5]
+  }
+}
