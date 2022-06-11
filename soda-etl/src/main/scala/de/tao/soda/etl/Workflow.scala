@@ -22,3 +22,7 @@ trait Multiplexer[T0, T1, T2] extends Workflow[T0, T1] {
     outSelf
   }
 }
+
+class IdentityWorkflow[T] extends IsoWorkflow[T] {
+  override def run(input: T, dry: Boolean): T = input
+}

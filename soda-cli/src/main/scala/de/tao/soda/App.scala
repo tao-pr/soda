@@ -45,6 +45,7 @@ object Main extends App with Help {
         dry = config.contains(ConfigParams.DRY_RUN)
       }
         yield Wget.downloadToLocal(url, localOutput, existsOk, dry)
+
     case _ => throw new UnsupportedOperationException(s"Unknown command : ${cmd.getOrElse("<empty>")}")
   }
 }

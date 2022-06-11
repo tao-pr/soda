@@ -12,7 +12,7 @@ import scala.reflect.ClassTag
 
 
 object TextFileReader extends DataReader[Iterable[String]]{
-  override def run(input: InputIdentifier, dry: Boolean) = {
+  override def run(input: InputIdentifier, dry: Boolean): Iterable[String] = {
     if (dry) {
       logger.info(s"TextFileReader to read from ${input}")
       Iterable.empty

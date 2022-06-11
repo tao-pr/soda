@@ -3,9 +3,9 @@ package de.tao.soda.etl.data
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.{AmazonS3Exception, S3Object, S3ObjectSummary}
-import de.tao.soda.etl.{DataLoader, Generator}
+import de.tao.soda.etl.{DataLoader, DataWriter, Generator}
 
-import java.io.ObjectInputStream
+import java.io.{ByteArrayInputStream, File, ObjectInputStream}
 import java.util
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
@@ -29,12 +29,13 @@ class S3ObjectReader[T <:Product with Serializable](
 (implicit val classTag: ClassTag[T]) extends DataLoader[T] with S3Default {
 
   override def run(input: String, dry: Boolean) = {
+    val fullURI = s"s3://$bucket/$input"
     if (dry){
-      logger.info(s"S3ObjectReader to read ${classTag} from $bucket/$input")
+      logger.info(s"S3ObjectReader to read ${classTag} from $fullURI")
       default
     }
     else {
-      logger.info(s"S3ObjectReader reading ${classTag} from $bucket/$input")
+      logger.info(s"S3ObjectReader reading ${classTag} from $fullURI")
       if (s3.doesObjectExist(bucket, input)){
         val obj: S3Object = s3.getObject(bucket, input)
         val reader = new ObjectInputStream(obj.getObjectContent)
@@ -43,8 +44,8 @@ class S3ObjectReader[T <:Product with Serializable](
         data
       }
       else {
-        logger.error(s"S3ObjectReader : Object does not exist : $bucket/$input")
-        throw new AmazonS3Exception(s"S3 Object does not exist : $bucket/$input")
+        logger.error(s"S3ObjectReader : Object does not exist : $fullURI")
+        throw new AmazonS3Exception(s"S3 Object does not exist : $fullURI")
       }
     }
   }
@@ -90,6 +91,44 @@ class S3BucketReader[T <:Product with Serializable](
         throw new AmazonS3Exception(s"S3 Bucket does not exist : $bucket")
       }
     }
+  }
+}
+
+class S3Writer[T <: Product with Serializable](
+  bucket: String,  key: String, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
+  (implicit val classTag: ClassTag[T]) extends DataWriter[T] with S3Default {
+
+  override def run(input: T, dry: Boolean) = {
+    val fullURI = s"s3://$bucket/$key"
+    if (dry) {
+      logger.info(s"S3Writer to write ${classTag} to $fullURI")
+    }
+    else {
+      logger.info(s"S3Writer writing ${classTag} to $fullURI")
+    }
+
+    if (!s3.doesBucketExistV2(bucket)){
+      logger.info(s"S3Writer trying to create bucket s3://${bucket}")
+      if (!dry)
+        s3.createBucket(bucket)
+    }
+
+    if (s3.doesObjectExist(bucket, key) && !overwrite){
+      logger.error(s"S3Writer will not overwrite existing $fullURI")
+      throw new AmazonS3Exception(s"S3 key $fullURI already exists")
+    }
+    // Write object to temp file
+    val tempFile = java.io.File.createTempFile("soda", s"$bucket-$key")
+    logger.info(s"S3Writer writing to temp file : ${tempFile.getAbsolutePath}")
+    logger.info(s"S3Writer uploading $classTag to $fullURI")
+
+    if (!dry){
+      ObjectWriter(tempFile.getAbsolutePath).run(input)
+      s3.putObject(bucket, key, tempFile)
+    }
+
+    tempFile.delete()
+    fullURI
   }
 }
 

@@ -3,6 +3,7 @@ package de.tao.soda.etl
 import org.apache.spark.sql.DataFrame
 
 import scala.io.BufferedSource
+import scala.reflect.ClassTag
 
 sealed trait InputIdentifier
 sealed trait BufferedInputIdentifier
@@ -57,4 +58,5 @@ extends DataPeek[DataFrame](title, numRecords, isOn) {
     data.show(numRecords.getOrElse(20), false)
   }
 }
+
 
