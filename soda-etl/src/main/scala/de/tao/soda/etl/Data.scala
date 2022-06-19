@@ -3,13 +3,16 @@ package de.tao.soda.etl
 import org.apache.spark.sql.DataFrame
 
 import scala.io.BufferedSource
-import scala.reflect.ClassTag
 
 sealed trait InputIdentifier
 sealed trait BufferedInputIdentifier
 
-case class PathIdentifier(s: String, encoding: Option[String]=None) extends InputIdentifier
-case class SourceIdentifier(s: BufferedSource) extends InputIdentifier
+case class PathIdentifier(s: String, encoding: Option[String]=None) extends InputIdentifier {
+  override def toString: String = s
+}
+case class SourceIdentifier(s: BufferedSource) extends InputIdentifier {
+  override def toString: String = s.getClass.getName
+}
 
 private[etl] object ToSource {
   def apply(ii: InputIdentifier): BufferedSource = ii match {
@@ -57,6 +60,34 @@ extends DataPeek[DataFrame](title, numRecords, isOn) {
   override protected def peek(data: DataFrame): Unit = {
     data.show(numRecords.getOrElse(20), false)
   }
+}
+
+final class IteratorToIterable[T] extends Workflow[Iterator[T], Iterable[T]]{
+  override def run(input: Iterator[T], dry: Boolean): Iterable[T] = {
+    if (!dry)
+      input.to(Iterable)
+    else Iterable.empty[T]
+  }
+}
+
+final class IterableToIterator[T] extends Workflow[Iterable[T], Iterator[T]] {
+  override def run(input: Iterable[T], dry: Boolean): Iterator[T] = {
+    if (!dry)
+      input.iterator
+    else Iterator.empty[T]
+  }
+}
+
+class LiftOption[T] extends Workflow[T, Option[T]]{
+  override def run(input: T, dry: Boolean): Option[T] = Option(input)
+}
+
+class UnliftOption[T] extends Workflow[Option[T], T]{
+  override def run(input: Option[T], dry: Boolean): T = input.get
+}
+
+class LiftIter[T] extends Workflow[T, Iterable[T]]{
+  override def run(input: T, dry: Boolean): Iterable[T] = Seq(input)
 }
 
 

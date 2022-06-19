@@ -1,18 +1,11 @@
 package de.tao.soda.etl
 
-import de.tao.soda.etl.data.{CSVFileReader, JSONReader, ObjectReader, ObjectWriter, ObjectZippedReader, ObjectZippedWriter}
+import de.tao.soda.etl.Implicits._
+import de.tao.soda.etl.data._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 
-import java.io.InputStreamReader
-import scala.io.BufferedSource
-import de.tao.soda.etl.Implicits._
-
-case class CSVData(id: Int, name: String, occupation: String, subscribed: Boolean, score: Int)
-case class H1(title: String, id: Int, p: Option[String])
-case class B1(s: List[Int])
-case class JSONData(header: H1, body: B1, b: Boolean)
-case class JSONList(arr: Array[JSONData])
+import Domain._
 
 class FileSpec extends AnyFlatSpec with BeforeAndAfter {
 

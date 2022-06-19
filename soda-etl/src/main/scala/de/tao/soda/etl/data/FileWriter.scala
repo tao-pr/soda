@@ -7,7 +7,7 @@ import purecsv.unsafe._
 import purecsv.unsafe.converter.RawFieldsConverter
 
 import java.io._
-import java.util.zip.{GZIPOutputStream, ZipOutputStream}
+import java.util.zip.GZIPOutputStream
 
 case class CSVFileWriter[T <: Product with Serializable](filename: String, delimiter: Char)
   (implicit val rc: RawFieldsConverter[T])
@@ -102,7 +102,7 @@ case class ObjectZippedWriter[T <: Product with Serializable](filename: String) 
   }
 }
 
-final object ObjectWriter {
+object ObjectWriter {
   def saveToFile[T <: Product with Serializable](data: T, filename: String): String ={
     ObjectWriter(filename).run(data, false)
     filename

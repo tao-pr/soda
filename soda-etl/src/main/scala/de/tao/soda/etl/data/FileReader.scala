@@ -6,7 +6,7 @@ import de.tao.soda.etl._
 import purecsv.unsafe._
 import purecsv.unsafe.converter.RawFieldsConverter
 
-import java.io.{ByteArrayInputStream, File, FileInputStream, ObjectInputStream, OutputStreamWriter}
+import java.io.{ByteArrayInputStream, File, FileInputStream, ObjectInputStream}
 import java.util.zip.GZIPInputStream
 import scala.reflect.ClassTag
 

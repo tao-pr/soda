@@ -8,10 +8,9 @@ trait Workflow[T1, T2] extends Serializable with LazyLogging {
 
 trait IsoWorkflow[T] extends Workflow[T, T]
 
-private case object Nothing
+case object Nothing
 
-trait Generator[T] extends Workflow[Nothing, T]
-trait Terminator[T] extends Workflow[T, Nothing]
+trait Generator[T] extends Workflow[Nothing.type , T]
 trait Multiplexer[T0, T1, T2] extends Workflow[T0, T1] {
   val self: Workflow[T0, T1]
   val plex: Workflow[T0, T2]
@@ -23,6 +22,11 @@ trait Multiplexer[T0, T1, T2] extends Workflow[T0, T1] {
   }
 }
 
+/**
+ * Workflow that returns exactly what it intakes
+ */
 class IdentityWorkflow[T] extends IsoWorkflow[T] {
   override def run(input: T, dry: Boolean): T = input
 }
+
+

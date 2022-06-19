@@ -7,6 +7,7 @@ private object CommandPrefix {
   val path = "-p:" // input path or identifier
   val output = "-o:" // output path or identifier
   val config = "-i:"
+  val app = "-app:"
 }
 
 private object ConfigParams {
@@ -27,6 +28,7 @@ object Main extends App with Help {
 
   lazy val isDebug = argPool.contains("--debug")
   lazy val cmd = argPool.find(_.startsWith(CommandPrefix.cmd)).map(_.stripPrefix(CommandPrefix.cmd))
+  lazy val app = argPool.find(_.startsWith(CommandPrefix.app)).map(_.stripPrefix(CommandPrefix.cmd))
   lazy val path = argPool.find(_.startsWith(CommandPrefix.path)).map(_.stripPrefix(CommandPrefix.path))
   lazy val output = argPool.find(_.startsWith(CommandPrefix.output)).map(_.stripPrefix(CommandPrefix.output))
   lazy val config = argPool.find(_.startsWith(CommandPrefix.config))
@@ -45,6 +47,9 @@ object Main extends App with Help {
         dry = config.contains(ConfigParams.DRY_RUN)
       }
         yield Wget.downloadToLocal(url, localOutput, existsOk, dry)
+    case Some("preset") => // run preset app
+      for { ap <- app }
+        yield Preset.runApp(ap)
 
     case _ => throw new UnsupportedOperationException(s"Unknown command : ${cmd.getOrElse("<empty>")}")
   }
