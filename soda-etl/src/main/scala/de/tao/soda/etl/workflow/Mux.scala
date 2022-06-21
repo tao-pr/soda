@@ -32,5 +32,7 @@ final class InterceptToCSV[T <: Product with Serializable](filename: String, del
   extends InterceptIterOutput[T](intercept = CSVFileWriter[T](filename, delimiter)(rc))
 
 
+class Intercept[T0,T1,T2](override val self: Workflow[T0,T1], override val plex: Workflow[T0, T2]) extends Multiplexer[T0, T1, T2]
+
 
 // todo: Multi mux which allow more than 2 workflows run

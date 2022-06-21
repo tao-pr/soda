@@ -1,6 +1,6 @@
 package de.tao.soda.etl.workflow
 
-import de.tao.soda.etl.{IdentityWorkflow, Workflow}
+import de.tao.soda.etl.{IdentityWorkflow, Multiplexer, Workflow}
 
 /**
  * Work sequence executes in order
@@ -30,6 +30,10 @@ case class WorkSequence[T0, T1, T2](head: Workflow[T0, T1], next: Workflow[T1, T
       case w: Workflow[_,_] => WorkSequence(w, tail)
     }
     WorkSequence[T0, T1, T3](head, newNext)
+  }
+
+  override def printTree(level: Int=0): String = {
+    steps.map(_.printTree(level)).mkString("\n")
   }
 }
 
