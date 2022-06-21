@@ -4,6 +4,8 @@ import de.tao.soda.etl.data.{CSVFileWriter, JSONFileWriter, ObjectWriter}
 import de.tao.soda.etl.{DataWriter, IdentityWorkflow, IsoWorkflow, Multiplexer, Workflow}
 import purecsv.unsafe.converter.RawFieldsConverter
 
+class Intercept[T0,T1,T2](override val self: Workflow[T0,T1], override val plex: Workflow[T0, T2]) extends Multiplexer[T0, T1, T2]
+
 // Intercept single object
 class InterceptOutput[T <: Product with Serializable]
   (intercept: DataWriter[T])
@@ -30,9 +32,6 @@ final class InterceptToBinaryFile[T <: Product with Serializable](filename: Stri
 final class InterceptToCSV[T <: Product with Serializable](filename: String, delimiter: Char)
   (implicit val rc: RawFieldsConverter[T])
   extends InterceptIterOutput[T](intercept = CSVFileWriter[T](filename, delimiter)(rc))
-
-
-class Intercept[T0,T1,T2](override val self: Workflow[T0,T1], override val plex: Workflow[T0, T2]) extends Multiplexer[T0, T1, T2]
 
 
 // todo: Multi mux which allow more than 2 workflows run
