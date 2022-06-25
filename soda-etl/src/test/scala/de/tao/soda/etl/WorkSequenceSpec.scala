@@ -12,7 +12,7 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
 
   it should "connect workflows together" in {
     val wfread: DataReader[Iterator[CSVData]] = CSVFileReader[CSVData](',')
-    val trans = new IteratorToIterable[CSVData]
+    val trans = new ToIterable[CSVData]
     val wfwrite: DataWriter[Iterable[CSVData]] = CSVFileWriter[CSVData]("fakefile.csv", ',')
 
     assert(wfread.isInstanceOf[Workflow[_,_]])
@@ -24,13 +24,13 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
     assert(wseq.isInstanceOf[WorkSequence[_,_,_]])
     assert(wseq.steps.map(_.getClass.getName) == List(
       "de.tao.soda.etl.data.CSVFileReader",
-      "de.tao.soda.etl.IteratorToIterable",
+      "de.tao.soda.etl.ToIterable",
       "de.tao.soda.etl.data.CSVFileWriter"))
   }
 
   it should "append a WorkSequence with another WorkSequence" in {
     val wfread: DataReader[Iterator[CSVData]] = CSVFileReader[CSVData](',')
-    val trans = new IteratorToIterable[CSVData]
+    val trans = new ToIterable[CSVData]
     val wseq1 = WorkSequence(wfread, trans)
 
     implicit val rfc: RawFieldsConverter[B1]
@@ -44,7 +44,7 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
     assert(joined.isInstanceOf[WorkSequence[_,_,_]])
     assert(joined.steps.map(_.getClass.getName) == List(
       "de.tao.soda.etl.data.CSVFileReader",
-      "de.tao.soda.etl.IteratorToIterable",
+      "de.tao.soda.etl.ToIterable",
       "de.tao.soda.etl.workflow.MapIter",
       "de.tao.soda.etl.data.CSVFileWriter"
     ))
@@ -52,7 +52,7 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
     assert(joined.printTree() ==
       """
         |+--CSVFileReader
-        |+--IteratorToIterable
+        |+--ToIterable
         |+--MapIter
         |+--CSVFileWriter
         |""".stripMargin.tail.stripLineEnd)

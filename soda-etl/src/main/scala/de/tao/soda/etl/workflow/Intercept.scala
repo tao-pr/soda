@@ -32,6 +32,3 @@ final class InterceptToBinaryFile[T <: Product with Serializable](filename: Stri
 final class InterceptToCSV[T <: Product with Serializable](filename: String, delimiter: Char)
   (implicit val rc: RawFieldsConverter[T])
   extends InterceptIterOutput[T](intercept = CSVFileWriter[T](filename, delimiter)(rc))
-
-
-// todo: Multi mux which allow more than 2 workflows run

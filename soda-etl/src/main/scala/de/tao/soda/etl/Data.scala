@@ -62,7 +62,7 @@ extends DataPeek[DataFrame](title, numRecords, isOn) {
   }
 }
 
-final class IteratorToIterable[T] extends Workflow[Iterator[T], Iterable[T]]{
+final class ToIterable[T] extends Workflow[Iterator[T], Iterable[T]]{
   override def run(input: Iterator[T], dry: Boolean): Iterable[T] = {
     if (!dry)
       input.to(Iterable)
@@ -70,7 +70,7 @@ final class IteratorToIterable[T] extends Workflow[Iterator[T], Iterable[T]]{
   }
 }
 
-final class IterableToIterator[T] extends Workflow[Iterable[T], Iterator[T]] {
+final class ToIterator[T] extends Workflow[Iterable[T], Iterator[T]] {
   override def run(input: Iterable[T], dry: Boolean): Iterator[T] = {
     if (!dry)
       input.iterator
