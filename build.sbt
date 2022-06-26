@@ -41,7 +41,8 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       jacksonModule,
       aws,
       scalaTest,
-      scalaTestLactic
+      scalaTestLactic,
+      dirWatcher
     )
   )
 
