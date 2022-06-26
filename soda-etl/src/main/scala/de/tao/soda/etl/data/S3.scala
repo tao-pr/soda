@@ -64,7 +64,7 @@ class S3BucketReader[T <:Product with Serializable](
   bucket: String, key: String, default: T, override val region: Regions = Regions.DEFAULT_REGION)
   (implicit val classTag: ClassTag[T]) extends Generator[Iterable[T]] with S3Default {
 
-  override def run(input: Nothing.type, dry: Boolean): Iterable[T] = {
+  override def run(input: Unit, dry: Boolean): Iterable[T] = {
     val fullURI = s"s3://$bucket/$key"
     if (dry){
       logger.info(s"S3BucketReader to read ${classTag} from $fullURI (region=${s3.getRegionName})")

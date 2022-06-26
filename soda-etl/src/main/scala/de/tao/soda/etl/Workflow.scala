@@ -11,9 +11,7 @@ trait Workflow[T1, T2] extends Serializable with LazyLogging {
 
 trait IsoWorkflow[T] extends Workflow[T, T]
 
-case object Nothing
-
-trait Generator[T] extends Workflow[Nothing.type , T]
+trait Generator[T] extends Workflow[Unit , T]
 trait Multiplexer[T0, T1, T2] extends Workflow[T0, T1] {
   val self: Workflow[T0, T1]
   val plex: Workflow[T0, T2]
