@@ -62,21 +62,21 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
     implicit val rfc: RawFieldsConverter[B1] = null
     implicit val klazz = classOf[JSONData]
     implicit val klazz2 = classOf[B1]
+    implicit val klazz3 = classOf[Option[B1]]
 
     val step1 = new ObjectZippedReader[JSONData]()
-    val step2 = new InterceptOutput[Option[JSONData]](JSONFileWriter[JSONData]("filename.json"))
-    val step3 = new UnliftOption[JSONData]()
-    val step4 = new Intercept[JSONData, JSONData, Option[B1]](new IdentityWorkflow[JSONData], {
+    val step2 = new InterceptOutput[JSONData](JSONFileWriter[JSONData]("filename.json"))
+    val step3 = new Intercept[JSONData, JSONData, Option[B1]](new IdentityWorkflow[JSONData], {
       val w1 = new Mapper[JSONData, B1]((data: JSONData) => data.body, null)
       val w2 = new InterceptToBinaryFile[B1]("filename.bin")
       val w3 = new LiftOption[B1]()
-      val w4 = new InterceptToJSON[B1](filename="filename.json")
+      val w4 = new InterceptToJSON[Option[B1]](filename="filename.json")
       val ws1: WorkSequence[JSONData, B1, B1] = new WorkSequence(w1, w2)
       val ws2: WorkSequence[B1, Option[B1], Option[B1]] = new WorkSequence(w3, w4)
       ws1 ++ ws2
     })
 
-    val wseq = WorkSequence(step1, step2) ++ WorkSequence(step3, step4)
+    val wseq = WorkSequence(step1, step2) ++ step3
 
     assert(wseq.printTree() ==
       """
@@ -86,7 +86,6 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
       ||  |  +--IdentityWorkflow
       ||  +--[plex]
       ||  |  +--JSONFileWriter
-      |+--UnliftOption
       |+--Intercept
       ||  +--[self]
       ||  |  +--IdentityWorkflow

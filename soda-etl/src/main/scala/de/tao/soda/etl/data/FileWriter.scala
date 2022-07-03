@@ -29,27 +29,17 @@ case class CSVFileWriter[T <: Product with Serializable](filename: String, delim
   }
 }
 
-case class JSONFileWriter[T <: Product with Serializable](filename: String)(implicit clazz: Class[T]) extends DataWriter[Option[T]] {
+case class JSONFileWriter[T <: Product with Serializable](filename: String)(implicit clazz: Class[T]) extends DataWriter[T] {
   lazy val mapper: JsonMapper = JsonMapper.builder()
     .addModule(DefaultScalaModule)
     .build()
 
-  override def run(input: Option[T], dry: Boolean): String = {
-    if (input.isEmpty){
-      logger.info(s"JSONFileWriter will not write anything because input is empty.")
-      filename
-    }
-    else if (dry){
-      logger.info(s"JSONFileWriter to write to $filename")
-      filename
-    }
-    else {
-      logger.info(s"JSONFileWriter writing file to $filename")
+  override def run(input: T, dry: Boolean): String = {
+    logger.info(s"JSONFileWriter writing file to $filename")
 
-      val ostream = new FileOutputStream(new File(filename))
-      mapper.writeValue(ostream, input)
-      filename
-    }
+    val ostream = new FileOutputStream(new File(filename))
+    mapper.writeValue(ostream, input)
+    filename
   }
 }
 

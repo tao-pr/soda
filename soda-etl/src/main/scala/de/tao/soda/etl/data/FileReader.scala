@@ -58,26 +58,19 @@ case class CSVFileReader[T <: Product with Serializable](delimiter: Char)
   }
 }
 
-class JSONReader[T <: Product with Serializable](implicit clazz: Class[T]) extends DataReader[Option[T]]{
+class JSONReader[T <: Product with Serializable](implicit clazz: Class[T]) extends DataReader[T]{
   lazy val mapper: JsonMapper = JsonMapper.builder()
     .addModule(DefaultScalaModule)
     .build()
 
   override def run(input: InputIdentifier, dry: Boolean) = {
-    if (dry){
-      logger.info(s"JSONReader to read ${clazz.getName} from $input")
-      None
-    }
-    else {
-      logger.info(s"JSONReader reading ${clazz.getName} from $input")
-      val parsed: T = input match {
-        case PathIdentifier(s, encoding) =>
-          mapper.readValue[T](new java.io.File(s), clazz)
-        case SourceIdentifier(s) =>
-          val content = s.getLines().mkString(" ")
-          mapper.readValue[T](content, clazz)
-      }
-      Some(parsed)
+    logger.info(s"JSONReader reading ${clazz.getName} from $input")
+    input match {
+      case PathIdentifier(s, encoding) =>
+        mapper.readValue[T](new java.io.File(s), clazz)
+      case SourceIdentifier(s) =>
+        val content = s.getLines().mkString(" ")
+        mapper.readValue[T](content, clazz)
     }
   }
 }
@@ -113,35 +106,29 @@ class ObjectReader[T <: Product with Serializable] extends DataReader[Option[T]]
   }
 }
 
-class ObjectZippedReader[T <: Product with Serializable] extends DataReader[Option[T]]{
-  override def run(input: InputIdentifier, dry: Boolean): Option[T] = {
-    if (dry){
-      logger.info(s"ObjectZippedReader to read from $input")
-      None
-    }
-    else {
-      logger.info(s"ObjectZippedReader reading from $input")
-      input match {
-        case PathIdentifier(s, _) =>
-          val filesize = new File(s).length()
-          logger.info(s"ObjectZippedReader reading ${filesize} bytes from file")
-          val gzip = new GZIPInputStream(new FileInputStream(s))
-          val reader = new ObjectInputStream(gzip)
-          val data = Option(reader.readObject().asInstanceOf[T])
-          reader.close()
-          data
+class ObjectZippedReader[T <: Product with Serializable] extends DataReader[T]{
+  override def run(input: InputIdentifier, dry: Boolean): T = {
+    logger.info(s"ObjectZippedReader reading from $input")
+    input match {
+      case PathIdentifier(s, _) =>
+        val filesize = new File(s).length()
+        logger.info(s"ObjectZippedReader reading ${filesize} bytes from file")
+        val gzip = new GZIPInputStream(new FileInputStream(s))
+        val reader = new ObjectInputStream(gzip)
+        val data = reader.readObject().asInstanceOf[T]
+        reader.close()
+        data
 
-        case SourceIdentifier(s) =>
-          val sreader = s.reader()
-          val bytes = LazyList.continually(sreader.read).takeWhile(_ != -1).map(_.toByte).toArray
-          logger.info(s"ObjectZippedReader reading ${bytes.length} bytes from file")
-          val gzip = new GZIPInputStream(new ByteArrayInputStream(bytes))
-          val reader = new ObjectInputStream(gzip)
-          val data = Option(reader.readObject().asInstanceOf[T])
-          sreader.close()
-          reader.close()
-          data
-      }
+      case SourceIdentifier(s) =>
+        val sreader = s.reader()
+        val bytes = LazyList.continually(sreader.read).takeWhile(_ != -1).map(_.toByte).toArray
+        logger.info(s"ObjectZippedReader reading ${bytes.length} bytes from file")
+        val gzip = new GZIPInputStream(new ByteArrayInputStream(bytes))
+        val reader = new ObjectInputStream(gzip)
+        val data = reader.readObject().asInstanceOf[T]
+        sreader.close()
+        reader.close()
+        data
     }
   }
 }

@@ -27,12 +27,11 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
     implicit val csvDataClass = classOf[JSONData]
     val json = new JSONReader[JSONData].run(jsonTest)
 
-    assert(json.isInstanceOf[Option[JSONData]])
-    assert(!json.isEmpty)
-    assert(json.get.header.p.isEmpty)
-    assert(json.get.header.title == "foobar")
-    assert(json.get.body.s == List(0,0,1,0,5))
-    assert(json.get.b == true)
+    assert(json.isInstanceOf[JSONData])
+    assert(json.header.p.isEmpty)
+    assert(json.header.title == "foobar")
+    assert(json.body.s == List(0,0,1,0,5))
+    assert(json.b == true)
   }
 
   it should "write an object to file" in {
@@ -67,12 +66,11 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
     // deserialiser
     val deserialiser = new ObjectZippedReader[JSONList]
     val destOpt = deserialiser.run(PathIdentifier(tempFile.getAbsolutePath))
-    assert(destOpt.isDefined)
-    assert(destOpt.get.arr.size == 5100)
-    assert(destOpt.get.arr.head.header.title == "title")
-    assert(destOpt.get.arr.head.header.p == Some("thing"))
-    assert(destOpt.get.arr.head.b == false)
-    assert(destOpt.get.arr.head.body.s.size == 100)
+    assert(destOpt.arr.size == 5100)
+    assert(destOpt.arr.head.header.title == "title")
+    assert(destOpt.arr.head.header.p == Some("thing"))
+    assert(destOpt.arr.head.b == false)
+    assert(destOpt.arr.head.body.s.size == 100)
 
     tempFile.delete()
   }

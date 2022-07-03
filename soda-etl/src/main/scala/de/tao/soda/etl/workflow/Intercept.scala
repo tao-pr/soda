@@ -6,6 +6,8 @@ import purecsv.unsafe.converter.RawFieldsConverter
 
 class Intercept[T0,T1,T2](override val self: Workflow[T0,T1], override val plex: Workflow[T0, T2]) extends Multiplexer[T0, T1, T2]
 
+class IsoIntercept[T](override val self: IsoWorkflow[T], override val plex: IsoWorkflow[T]) extends Intercept[T,T,T](self, plex)
+
 // Intercept single object
 class InterceptOutput[T <: Product with Serializable]
   (intercept: DataWriter[T])
@@ -23,7 +25,7 @@ class InterceptIterOutput[T <: Product with Serializable]
 }
 
 final class InterceptToJSON[T <: Product with Serializable](filename: String)(implicit clazz: Class[T])
-  extends InterceptOutput[Option[T]](intercept = JSONFileWriter[T](filename)(clazz))
+  extends InterceptOutput[T](intercept = JSONFileWriter[T](filename)(clazz))
 
 final class InterceptToBinaryFile[T <: Product with Serializable](filename: String)
   extends InterceptOutput[T](intercept = ObjectWriter[T](filename))
