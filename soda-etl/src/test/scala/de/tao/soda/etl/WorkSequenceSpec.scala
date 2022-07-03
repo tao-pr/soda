@@ -67,7 +67,7 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
     val step1 = new ObjectZippedReader[JSONData]()
     val step2 = new InterceptOutput[JSONData](JSONFileWriter[JSONData]("filename.json"))
     val step3 = new Intercept[JSONData, JSONData, Option[B1]](new IdentityWorkflow[JSONData], {
-      val w1 = new Mapper[JSONData, B1]((data: JSONData) => data.body, null)
+      val w1 = new Mapper[JSONData, B1]((data: JSONData) => data.body)
       val w2 = new InterceptToBinaryFile[B1]("filename.bin")
       val w3 = new LiftOption[B1]()
       val w4 = new InterceptToJSON[Option[B1]](filename="filename.json")

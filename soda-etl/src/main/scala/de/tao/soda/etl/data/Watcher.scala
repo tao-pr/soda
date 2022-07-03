@@ -11,35 +11,30 @@ import io.methvin.better.files.RecursiveFileMonitor
  */
 class Watcher[T](pipeCreate: Option[Workflow[String, T]], pipeDelete: Option[Workflow[String, T]]) extends DataLoader[Unit] {
 
-  override def run(input: String, dry: Boolean): Unit = {
-    if (dry){
-      logger.info(s"Watcher to watch $input")
-    }
-    else {
-      logger.info(s"Watcher start watching $input")
-      val path = better.files.File(input)
-      val watcher = new RecursiveFileMonitor(path) {
-        override def onCreate(file: File, count: Int) = {
-          if (pipeCreate.isDefined) {
-            logger.info(s"Watcher receiving a CREATE signal: $file")
-            pipeCreate.map(_.run(file.canonicalPath))
-          }
-          else logger.info(s"Watch ignoring a CREATE signal: $file")
+  override def run(input: String): Unit = {
+    logger.info(s"Watcher start watching $input")
+    val path = better.files.File(input)
+    val watcher = new RecursiveFileMonitor(path) {
+      override def onCreate(file: File, count: Int) = {
+        if (pipeCreate.isDefined) {
+          logger.info(s"Watcher receiving a CREATE signal: $file")
+          pipeCreate.map(_.run(file.canonicalPath))
         }
-        override def onModify(file: File, count: Int) = {
-          if (pipeCreate.isDefined) {
-            logger.info(s"Watcher receiving a MODIFY signal: $file")
-            pipeCreate.map(_.run(file.canonicalPath))
-          }
-          else logger.info(s"Watcher ignoring a MODIFY signal: file")
+        else logger.info(s"Watch ignoring a CREATE signal: $file")
+      }
+      override def onModify(file: File, count: Int) = {
+        if (pipeCreate.isDefined) {
+          logger.info(s"Watcher receiving a MODIFY signal: $file")
+          pipeCreate.map(_.run(file.canonicalPath))
         }
-        override def onDelete(file: File, count: Int) = {
-          if (pipeDelete.isDefined) {
-            logger.info(s"Watcher receiving a DELETE signal: $file")
-            pipeDelete.map(_.run(file.canonicalPath))
-          }
-          else logger.info(s"Watch ignoring a DELETE signal: $file")
+        else logger.info(s"Watcher ignoring a MODIFY signal: file")
+      }
+      override def onDelete(file: File, count: Int) = {
+        if (pipeDelete.isDefined) {
+          logger.info(s"Watcher receiving a DELETE signal: $file")
+          pipeDelete.map(_.run(file.canonicalPath))
         }
+        else logger.info(s"Watch ignoring a DELETE signal: $file")
       }
     }
   }

@@ -19,7 +19,7 @@ class WorkflowSpec extends AnyFlatSpec with BeforeAndAfter {
   )
 
   it should "map" in {
-    val m = new Mapper[T,M](map, null)
+    val m = new Mapper[T,M](map)
     val inp = T(1, None, Nil)
     assert(m.run(inp) == M("", 0))
   }
@@ -37,7 +37,7 @@ class WorkflowSpec extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "mapWithWorkflow" in {
-    val wf = new Mapper[T,M](map, null)
+    val wf = new Mapper[T,M](map)
     val m = new MapWithWorkflow[T,M](wf)
     val out = m.run(inputList)
     assert(out.size == inputList.size)

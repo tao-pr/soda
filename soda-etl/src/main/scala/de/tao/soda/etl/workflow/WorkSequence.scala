@@ -6,13 +6,9 @@ import de.tao.soda.etl.{IdentityWorkflow, Multiplexer, Workflow}
  * Work sequence executes in order
  */
 case class WorkSequence[T0, T1, T2](head: Workflow[T0, T1], next: Workflow[T1, T2]) extends Workflow[T0, T2]{
-  override def run(input: T0, dry: Boolean): T2 = {
-    if (dry)
-      logger.info(s"WorkSequence to run ${head.getClass.getName} followed by ${next.getClass.getName}")
-    else
-      logger.info(s"WorkSequence running ${head.getClass.getName} followed by ${next.getClass.getName}")
-
-    next.run(head.run(input, dry), dry)
+  override def run(input: T0): T2 = {
+    logger.info(s"WorkSequence running ${head.getClass.getName} followed by ${next.getClass.getName}")
+    next.run(head.run(input))
   }
 
   final def steps: List[Workflow[_,_]] = {

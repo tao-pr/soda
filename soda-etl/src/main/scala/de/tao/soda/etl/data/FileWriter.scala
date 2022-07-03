@@ -13,19 +13,14 @@ case class CSVFileWriter[T <: Product with Serializable](filename: String, delim
   (implicit val rc: RawFieldsConverter[T])
   extends DataWriter[Iterable[T]] {
 
-  override def run(input: Iterable[T], dry: Boolean): String = {
+  override def run(input: Iterable[T]): String = {
     val headerOpt = input.headOption.map(_.productElementNames.toList)
-    if (dry){
-      logger.info(s"CSVFileWriter to write to $filename, with headers = $headerOpt")
-      filename
-    }
-    else {
-      logger.info(s"CSVFileWriter writing file to $filename, with headers = $headerOpt")
+    logger.info(s"CSVFileWriter writing file to $filename, with headers = $headerOpt")
 
-      val csv = new CSVIterable[T](input)
-      csv.writeCSVToFileName(filename, delimiter.toString, headerOpt)
-      filename
-    }
+    val csv = new CSVIterable[T](input)
+    csv.writeCSVToFileName(filename, delimiter.toString, headerOpt)
+    filename
+
   }
 }
 
@@ -34,7 +29,7 @@ case class JSONFileWriter[T <: Product with Serializable](filename: String)(impl
     .addModule(DefaultScalaModule)
     .build()
 
-  override def run(input: T, dry: Boolean): String = {
+  override def run(input: T): String = {
     logger.info(s"JSONFileWriter writing file to $filename")
 
     val ostream = new FileOutputStream(new File(filename))
@@ -44,51 +39,33 @@ case class JSONFileWriter[T <: Product with Serializable](filename: String)(impl
 }
 
 case class TextFileWriter[T <: Product with Serializable](filename: String) extends DataWriter[Iterable[T]] {
-  override def run(input: Iterable[T], dry: Boolean): String = {
-    if (dry){
-      logger.info(s"TextFileWriter to write to $filename")
-      filename
-    }
-    else {
-      logger.info(s"TextFileWriter writing file to $filename")
-      val bufWriter = new BufferedWriter(new FileWriter(filename))
-      input.foreach{ entry => bufWriter.write(entry.toString() + "\n") }
-      bufWriter.close()
-      filename
-    }
+  override def run(input: Iterable[T]): String = {
+    logger.info(s"TextFileWriter writing file to $filename")
+    val bufWriter = new BufferedWriter(new FileWriter(filename))
+    input.foreach{ entry => bufWriter.write(entry.toString() + "\n") }
+    bufWriter.close()
+    filename
   }
 }
 
 case class ObjectWriter[T <: Product with Serializable](filename: String) extends DataWriter[T]{
-  override def run(input: T, dry: Boolean): String = {
-    if (dry){
-      logger.info(s"ObjectWriter to write to $filename")
-      filename
-    }
-    else{
-      logger.info(s"ObjectWriter writing to $filename")
-      val writer = new ObjectOutputStream(new FileOutputStream(filename))
-      writer.writeObject(input)
-      writer.close()
-      filename
-    }
+  override def run(input: T): String = {
+    logger.info(s"ObjectWriter writing to $filename")
+    val writer = new ObjectOutputStream(new FileOutputStream(filename))
+    writer.writeObject(input)
+    writer.close()
+    filename
   }
 }
 
 case class ObjectZippedWriter[T <: Product with Serializable](filename: String) extends DataWriter[T]{
-  override def run(input: T, dry: Boolean): String = {
-    if (dry){
-      logger.info(s"ObjectZippedWriter to write to $filename")
-      filename
-    }
-    else{
-      logger.info(s"ObjectZippedWriter writing to $filename")
-      val gzip = new GZIPOutputStream(new FileOutputStream(filename))
-      val writer = new ObjectOutputStream(gzip)
-      writer.writeObject(input)
-      writer.close()
-      filename
-    }
+  override def run(input: T): String = {
+    logger.info(s"ObjectZippedWriter writing to $filename")
+    val gzip = new GZIPOutputStream(new FileOutputStream(filename))
+    val writer = new ObjectOutputStream(gzip)
+    writer.writeObject(input)
+    writer.close()
+    filename
   }
 }
 

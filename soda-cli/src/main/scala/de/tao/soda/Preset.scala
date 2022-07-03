@@ -20,7 +20,7 @@ sealed trait Preset {
 case class Record(id: Int, name: String, scores: Array[Double])
 
 private final case object DataGenerator extends DataLoader[Iterable[Record]] {
-  override def run(input: String, dry: Boolean): Iterable[Record] =
+  override def run(input: String): Iterable[Record] =
     Seq(
       Record(1, "foo", Array.empty),
       Record(2, "baz", Array(1.3, 2.5, 3.3)),

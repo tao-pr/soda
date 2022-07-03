@@ -46,7 +46,7 @@ object Main extends App with Help {
         existsOk = config.contains(ConfigParams.EXISTS_OK)
         dry = config.contains(ConfigParams.DRY_RUN)
       }
-        yield Wget.downloadToLocal(url, localOutput, existsOk, dry)
+        yield Wget.downloadToLocal(url, localOutput, existsOk)
     case Some("preset") => // run preset app
       for { ap <- app }
         yield Preset.runApp(ap)

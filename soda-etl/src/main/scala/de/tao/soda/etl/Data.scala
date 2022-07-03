@@ -38,7 +38,7 @@ trait DataDumper[T] extends Workflow[T, String]
 trait DataWriter[T] extends Workflow[T, String]
 trait DataIntercept[T] extends IsoWorkflow[T] {
   def intercept(data: T): Unit
-  override def run(input: T, dry: Boolean): T = {
+  override def run(input: T): T = {
     intercept(input)
     input
   }
@@ -63,31 +63,27 @@ extends DataPeek[DataFrame](title, numRecords, isOn) {
 }
 
 final class ToIterable[T] extends Workflow[Iterator[T], Iterable[T]]{
-  override def run(input: Iterator[T], dry: Boolean): Iterable[T] = {
-    if (!dry)
-      input.to(Iterable)
-    else Iterable.empty[T]
+  override def run(input: Iterator[T]): Iterable[T] = {
+    input.to(Iterable)
   }
 }
 
 final class ToIterator[T] extends Workflow[Iterable[T], Iterator[T]] {
-  override def run(input: Iterable[T], dry: Boolean): Iterator[T] = {
-    if (!dry)
-      input.iterator
-    else Iterator.empty[T]
+  override def run(input: Iterable[T]): Iterator[T] = {
+    input.iterator
   }
 }
 
 class LiftOption[T] extends Workflow[T, Option[T]]{
-  override def run(input: T, dry: Boolean): Option[T] = Option(input)
+  override def run(input: T): Option[T] = Option(input)
 }
 
 class UnliftOption[T] extends Workflow[Option[T], T]{
-  override def run(input: Option[T], dry: Boolean): T = input.get
+  override def run(input: Option[T]): T = input.get
 }
 
 class LiftIter[T] extends Workflow[T, Iterable[T]]{
-  override def run(input: T, dry: Boolean): Iterable[T] = Seq(input)
+  override def run(input: T): Iterable[T] = Seq(input)
 }
 
 

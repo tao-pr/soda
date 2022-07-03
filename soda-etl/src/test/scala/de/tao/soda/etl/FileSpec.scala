@@ -40,7 +40,7 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
     // serialise
     val tempFile = java.io.File.createTempFile("sodatest", "jsondata")
     val serialiser = ObjectWriter[JSONList](tempFile.getAbsolutePath)
-    serialiser.run(src, false)
+    serialiser.run(src)
 
     // deserialiser
     val deserialiser = new ObjectReader[JSONList]
@@ -61,7 +61,7 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
     // serialise
     val tempFile = java.io.File.createTempFile("sodatest", "jsonzipped")
     val serialiser = ObjectZippedWriter[JSONList](tempFile.getAbsolutePath)
-    serialiser.run(src, false)
+    serialiser.run(src)
 
     // deserialiser
     val deserialiser = new ObjectZippedReader[JSONList]
