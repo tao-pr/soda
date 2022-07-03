@@ -18,7 +18,6 @@ private object ConfigParams {
     str.split(",").view.map{_.split("=").toTuple}.toMap
   }
 
-  val DRY_RUN = "dry"
   val DEBUG = "debug"
   val EXISTS_OK = "existok"
 }
@@ -44,7 +43,6 @@ object Main extends App with Help {
         url <- path
         localOutput <- output
         existsOk = config.contains(ConfigParams.EXISTS_OK)
-        dry = config.contains(ConfigParams.DRY_RUN)
       }
         yield Wget.downloadToLocal(url, localOutput, existsOk)
     case Some("preset") => // run preset app
