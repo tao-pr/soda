@@ -2,10 +2,9 @@ package de.tao.soda.etl.data
 
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import de.tao.soda.etl.{DataReader, DataWriter, InputIdentifier, PathIdentifier, SourceIdentifier, Workflow}
-import org.sparkproject.jetty.util.ByteArrayOutputStream2
+import de.tao.soda.etl.Workflow
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, FileOutputStream, Serializable}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, Serializable}
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
 abstract class Serializer[T] extends Workflow[T, Array[Byte]]
@@ -56,7 +55,7 @@ class GzipCompress extends Workflow[Array[Byte], Array[Byte]]{
     gzip.close()
     val zipped = bstream.toByteArray
     val postsize = zipped.size
-    val percent = postsize/presize.toDouble
+    val percent = 100*(presize-postsize)/presize.toDouble
     logger.info(s"Gzip compress ${percent} % ($presize => $postsize) bytes")
     zipped
   }
@@ -69,7 +68,8 @@ class GzipDecompress extends Workflow[Array[Byte], Array[Byte]]{
     val gzip = new GZIPInputStream(new ByteArrayInputStream(input))
     val zipped = gzip.readAllBytes()
     val postsize = zipped.size
-    val percent = postsize/presize.toDouble
+    gzip.close()
+    val percent = 100*(postsize-presize)/postsize.toDouble
     logger.info(s"Gzip decompress ${percent} % ($presize => $postsize) bytes")
     zipped
   }

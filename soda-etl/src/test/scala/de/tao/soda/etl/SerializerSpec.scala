@@ -35,4 +35,15 @@ class SerializerSpec extends AnyFlatSpec with BeforeAndAfter {
     assert(dbytes.map(_.toInt).diff(bytes.map(_.toInt)).isEmpty)
   }
 
+  it should "compress UTF-8 string" in {
+    val str = "{hey @somedude @straßer, have you got a chocolate?}"
+    val bytes = str.getBytes("UTF-8")
+    val cbytes = new GzipCompress().run(bytes)
+    val dbytes = new GzipDecompress().run(cbytes)
+    val dstr = new String(dbytes, "UTF-8")
+
+    assert(str.size == dstr.size)
+    assert(str == dstr)
+  }
+
 }
