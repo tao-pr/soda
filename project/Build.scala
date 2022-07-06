@@ -13,6 +13,7 @@ object Build extends AutoPlugin {
     val scalaTestVersion = "3.2.11"
     val awsVersion = "1.12.233"
     val directoryWatcherVersion = "0.15.1"
+    val snappyVersion = "1.1.8.4"
 
     val jacksonModule = "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
     val logback = "ch.qos.logback" % "logback-classic" % "1.2.11"
@@ -24,6 +25,7 @@ object Build extends AutoPlugin {
     val scalaTest = "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     val aws = "com.amazonaws" % "aws-java-sdk" % awsVersion
     val dirWatcher = "io.methvin" % "directory-watcher-better-files_2.13" % directoryWatcherVersion
+    val snappy = "org.xerial.snappy" % "snappy-java" % snappyVersion
   }
 
   import autoImport._

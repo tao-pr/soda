@@ -42,7 +42,8 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       aws,
       scalaTest,
       scalaTestLactic,
-      dirWatcher
+      dirWatcher,
+      snappy
     )
   )
 
