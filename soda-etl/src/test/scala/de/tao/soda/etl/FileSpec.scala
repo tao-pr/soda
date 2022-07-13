@@ -48,8 +48,8 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
     assert(destOpt.isDefined)
     assert(destOpt.get.arr.size == 5100)
     assert(destOpt.get.arr.head.header.title == "title")
-    assert(destOpt.get.arr.head.header.p == Some("thing"))
-    assert(destOpt.get.arr.head.b == false)
+    assert(destOpt.get.arr.head.header.p.contains("thing"))
+    assert(!destOpt.get.arr.head.b)
     assert(destOpt.get.arr.head.body.s.size == 100)
 
     tempFile.delete()
@@ -68,8 +68,8 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
     val destOpt = deserialiser.run(PathIdentifier(tempFile.getAbsolutePath))
     assert(destOpt.arr.size == 5100)
     assert(destOpt.arr.head.header.title == "title")
-    assert(destOpt.arr.head.header.p == Some("thing"))
-    assert(destOpt.arr.head.b == false)
+    assert(destOpt.arr.head.header.p.contains("thing"))
+    assert(!destOpt.arr.head.b)
     assert(destOpt.arr.head.body.s.size == 100)
 
     tempFile.delete()

@@ -12,14 +12,6 @@ abstract class Serializer[T] extends Workflow[T, Array[Byte]]
 
 abstract class Deserializer[T] extends Workflow[Array[Byte], T]
 
-final class BSONSerializer[T] extends Serializer[T]{
-  override def run(input: T): Array[Byte] = ???
-}
-
-final class BSONDeserializer[T] extends Deserializer[T]{
-  override def run(input: Array[Byte]): T = ???
-}
-
 class JSONSerializer[T <: Product with Serializable](implicit clazz: Class[T]) extends Serializer[T] {
   lazy val mapper: JsonMapper = JsonMapper.builder()
     .addModule(DefaultScalaModule)

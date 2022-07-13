@@ -9,6 +9,7 @@ import purecsv.unsafe.converter.RawFieldsConverter
 import java.io.{ByteArrayInputStream, File, FileInputStream, ObjectInputStream}
 import java.util.zip.GZIPInputStream
 import scala.reflect.ClassTag
+import scala.util.parsing.input.StreamReader
 
 
 object TextFileReader extends DataReader[Iterable[String]]{
@@ -39,6 +40,14 @@ case class CSVFileReader[T <: Product with Serializable](delimiter: Char)
     val iter = CSVReader[T].readCSVFromReader(streamReader, delimiter)
     //streamReader.close()
     iter
+  }
+}
+
+case class CSVFromStringReader[T <: Product with Serializable](delimiter: Char)
+(implicit val classTag: ClassTag[T], val converter: RawFieldsConverter[T]) extends Workflow[String, Iterator[T]]{
+  override def run(input: String): Iterator[T] = {
+    logger.info(s"CSVIterReader reading ${classTag} from an iterable")
+    CSVReader[T].readCSVFromString(input, delimiter).iterator
   }
 }
 

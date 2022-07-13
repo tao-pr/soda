@@ -1,18 +1,25 @@
 package de.tao.soda.etl.data
 
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.model.{AmazonS3Exception, ObjectMetadata, S3Object, S3ObjectSummary}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import de.tao.soda.etl._
 
-import java.io.{ByteArrayInputStream, File, ObjectInputStream}
+import java.io.{ByteArrayInputStream, File, InputStream, ObjectInputStream}
 import java.util
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
 trait S3Default {
   val region: Regions
-  final lazy val s3: AmazonS3 = AmazonS3ClientBuilder.standard().withRegion(region).build()
+  final lazy val s3: AmazonS3 = AmazonS3ClientBuilder
+    .standard()
+    .withCredentials(new ProfileCredentialsProvider)
+    .withRegion(region)
+    .build()
+
+  def bucketExists(bucket: String): Boolean = s3.doesBucketExistV2(bucket)
 }
 
 
@@ -40,6 +47,23 @@ class S3ObjectReader[T <:Product with Serializable](
     }
     else {
       logger.error(s"S3ObjectReader : Object does not exist : $fullURI")
+      throw new AmazonS3Exception(s"S3 Object does not exist : $fullURI")
+    }
+  }
+}
+
+class S3StreamReader(bucket: String, encoding: String, override val region: Regions = Regions.DEFAULT_REGION)
+extends DataLoader[InputIdentifier] with S3Default {
+
+  override def run(input: String): InputIdentifier = {
+    val fullURI = s"s3://$bucket/$input"
+    logger.info(s"S3StreamReader reading input stream ($encoding) from $fullURI (region=${s3.getRegionName})")
+    if (s3.doesObjectExist(bucket, input)){
+      val obj: S3Object = s3.getObject(bucket, input)
+      StreamIdentifier(obj.getObjectContent, encoding)
+    }
+    else {
+      logger.error(s"S3StreamReader : Object does not exist : $fullURI")
       throw new AmazonS3Exception(s"S3 Object does not exist : $fullURI")
     }
   }
@@ -87,7 +111,7 @@ class S3Writer[T <: Product with Serializable](
   bucket: String,  key: String, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
   (implicit val classTag: ClassTag[T]) extends DataWriter[T] with S3Default {
 
-  override def run(input: T): String = {
+  override def run(input: T): InputIdentifier = {
     val fullURI = s"s3://$bucket/$key"
     logger.info(s"S3Writer writing ${classTag} to $fullURI (region=${s3.getRegionName})")
 
@@ -109,7 +133,7 @@ class S3Writer[T <: Product with Serializable](
     s3.putObject(bucket, key, tempFile)
 
     tempFile.delete()
-    fullURI
+    PathIdentifier(fullURI)
   }
 }
 
@@ -119,6 +143,7 @@ extends DataWriter[InputIdentifier] with S3Default {
   override def run(input: InputIdentifier) = {
     val fullURI = s"s3://$bucket/$key"
     logger.info(s"S3Uploader uploading $input to $fullURI (region=${s3.getRegionName})")
+
     if (!s3.doesBucketExistV2(bucket)){
       logger.info(s"S3Uploader trying to create bucket s3://${bucket}")
       s3.createBucket(bucket)
@@ -141,6 +166,8 @@ extends DataWriter[InputIdentifier] with S3Default {
         logger.info(s"S3Uploader uploading ${bytes.length} bytes")
         s3.putObject(bucket, key, bstream, new ObjectMetadata())
     }
-    fullURI
+    PathIdentifier(fullURI)
   }
 }
+
+// todo: ACL for created bucket & object

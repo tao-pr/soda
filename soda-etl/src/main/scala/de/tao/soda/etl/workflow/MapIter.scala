@@ -15,6 +15,14 @@ class MapIter[T1, T2](mapper: T1 => T2) extends Workflow[Iterable[T1], Iterable[
   }
 }
 
+class MapIterator[T1, T2](mapper: T1 => T2) extends Workflow[Iterator[T1], Iterator[T2]] {
+
+  override def run(input: Iterator[T1]): Iterator[T2] = {
+    logger.info(s"MapIterator is executing with : ${mapper}")
+    input.map(mapper)
+  }
+}
+
 class Mapper[T1, T2](mapper: T1 => T2) extends Workflow[T1, T2] {
   override def run(input: T1): T2 = {
     logger.info(s"Mapper is executing with : ${mapper}")

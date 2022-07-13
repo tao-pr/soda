@@ -2,6 +2,12 @@ package de.tao.soda.etl.workflow
 
 import de.tao.soda.etl.Workflow
 
+class StringToIter(newline: Char) extends Workflow[String, Iterable[String]]{
+  override def run(input: String): Iterable[String] = {
+    input.split(newline)
+  }
+}
+
 class Reducer[T](red: (T, T) => T) extends Workflow[Iterable[T], T] {
   override def run(input: Iterable[T]): T = {
     logger.info(s"Reducer running on iterable")

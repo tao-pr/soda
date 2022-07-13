@@ -2,6 +2,7 @@ package de.tao.soda.etl
 
 import org.apache.spark.sql.DataFrame
 
+import java.io.InputStream
 import scala.io.BufferedSource
 
 sealed trait InputIdentifier
@@ -10,7 +11,12 @@ sealed trait BufferedInputIdentifier
 case class PathIdentifier(s: String, encoding: Option[String]=None) extends InputIdentifier {
   override def toString: String = s
 }
+
 case class SourceIdentifier(s: BufferedSource) extends InputIdentifier {
+  override def toString: String = s.getClass.getName
+}
+
+case class StreamIdentifier(s: InputStream, encoding: String) extends InputIdentifier {
   override def toString: String = s.getClass.getName
 }
 
@@ -19,6 +25,7 @@ private[etl] object ToSource {
     case PathIdentifier(s, None) => scala.io.Source.fromFile(s)
     case PathIdentifier(s, Some(e)) => scala.io.Source.fromFile(s, e)
     case SourceIdentifier(s) => s
+    case StreamIdentifier(s, e) => scala.io.Source.fromInputStream(s, e)
   }
 }
 
@@ -34,8 +41,8 @@ object Implicits {
 
 trait DataReader[T] extends Workflow[InputIdentifier, T]
 trait DataLoader[T] extends Workflow[String, T]
-trait DataDumper[T] extends Workflow[T, String]
-trait DataWriter[T] extends Workflow[T, String]
+trait DataDumper[T] extends Workflow[T, InputIdentifier]
+trait DataWriter[T] extends Workflow[T, InputIdentifier]
 trait DataIntercept[T] extends IsoWorkflow[T] {
   def intercept(data: T): Unit
   override def run(input: T): T = {

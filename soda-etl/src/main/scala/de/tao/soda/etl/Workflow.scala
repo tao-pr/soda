@@ -1,12 +1,16 @@
 package de.tao.soda.etl
 
 import com.typesafe.scalalogging.LazyLogging
+import de.tao.soda.etl.workflow.WorkSequence
 
 
 trait Workflow[T1, T2] extends Serializable with LazyLogging {
   def run(input: T1): T2
   protected def prefixTree(level: Int) = if (level==0) "+--" else "|  "*level+"+--"
   def printTree(level: Int=0): String = s"${prefixTree(level)}${this.getClass.getSimpleName}"
+  def +>[T3](next: Workflow[T2,T3]): Workflow[T1,T3] = {
+    WorkSequence.join(this, next)
+  }
 }
 
 trait IsoWorkflow[T] extends Workflow[T, T]
@@ -38,5 +42,4 @@ trait Multiplexer[T0, T1, T2] extends Workflow[T0, T1] {
 class IdentityWorkflow[T] extends IsoWorkflow[T] {
   override def run(input: T): T = input
 }
-
 
