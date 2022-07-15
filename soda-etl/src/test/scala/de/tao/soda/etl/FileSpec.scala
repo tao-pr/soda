@@ -4,8 +4,8 @@ import de.tao.soda.etl.Implicits._
 import de.tao.soda.etl.data._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
-
 import Domain._
+import de.tao.soda.etl.data.OutputIdentifier.$
 
 class FileSpec extends AnyFlatSpec with BeforeAndAfter {
 
@@ -39,7 +39,7 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
 
     // serialise
     val tempFile = java.io.File.createTempFile("sodatest", "jsondata")
-    val serialiser = ObjectWriter[JSONList](tempFile.getAbsolutePath)
+    val serialiser = ObjectWriter[JSONList]($(tempFile.getAbsolutePath))
     serialiser.run(src)
 
     // deserialiser
@@ -60,7 +60,7 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
 
     // serialise
     val tempFile = java.io.File.createTempFile("sodatest", "jsonzipped")
-    val serialiser = ObjectZippedWriter[JSONList](tempFile.getAbsolutePath)
+    val serialiser = ObjectZippedWriter[JSONList](OutputPath(tempFile.getAbsolutePath))
     serialiser.run(src)
 
     // deserialiser

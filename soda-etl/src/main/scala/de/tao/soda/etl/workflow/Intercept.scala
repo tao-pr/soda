@@ -1,6 +1,6 @@
 package de.tao.soda.etl.workflow
 
-import de.tao.soda.etl.data.{CSVFileWriter, JSONFileWriter, ObjectWriter}
+import de.tao.soda.etl.data.{CSVFileWriter, JSONFileWriter, ObjectWriter, OutputIdentifier}
 import de.tao.soda.etl.{DataWriter, IdentityWorkflow, InputIdentifier, IsoWorkflow, Multiplexer, Workflow}
 import purecsv.unsafe.converter.RawFieldsConverter
 
@@ -24,13 +24,13 @@ class InterceptIterOutput[T <: Product with Serializable]
   override val plex: Workflow[Iterable[T], InputIdentifier] = intercept
 }
 
-final class InterceptToJSON[T <: Product with Serializable](filename: String)(implicit clazz: Class[T])
+final class InterceptToJSON[T <: Product with Serializable](filename: OutputIdentifier)(implicit clazz: Class[T])
   extends InterceptOutput[T](intercept = JSONFileWriter[T](filename)(clazz))
 
-final class InterceptToBinaryFile[T <: Product with Serializable](filename: String)
+final class InterceptToBinaryFile[T <: Product with Serializable](filename: OutputIdentifier)
   extends InterceptOutput[T](intercept = ObjectWriter[T](filename))
 
 // Only for iterables
-final class InterceptToCSV[T <: Product with Serializable](filename: String, delimiter: Char)
+final class InterceptToCSV[T <: Product with Serializable](filename: OutputIdentifier, delimiter: Char)
   (implicit val rc: RawFieldsConverter[T])
   extends InterceptIterOutput[T](intercept = CSVFileWriter[T](filename, delimiter)(rc))

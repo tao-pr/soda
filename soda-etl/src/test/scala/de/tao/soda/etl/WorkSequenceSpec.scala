@@ -1,10 +1,11 @@
 package de.tao.soda.etl
 
-import de.tao.soda.etl.data.{CSVFileReader, CSVFileWriter, JSONFileWriter, ObjectZippedReader}
+import de.tao.soda.etl.data.{CSVFileReader, CSVFileWriter, JSONFileWriter, ObjectZippedReader, OutputPath}
 import de.tao.soda.etl.workflow.{Intercept, InterceptOutput, InterceptToBinaryFile, InterceptToCSV, InterceptToJSON, MapIter, Mapper, WorkSequence}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 import Domain._
+import de.tao.soda.etl.data.OutputIdentifier.$
 import org.apache.commons.lang.NotImplementedException
 import purecsv.unsafe.converter.RawFieldsConverter
 
@@ -13,7 +14,7 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
   it should "connect workflows together" in {
     val wfread: DataReader[Iterator[CSVData]] = CSVFileReader[CSVData](',')
     val trans = new ToIterable[CSVData]
-    val wfwrite: DataWriter[Iterable[CSVData]] = CSVFileWriter[CSVData]("fakefile.csv", ',')
+    val wfwrite: DataWriter[Iterable[CSVData]] = CSVFileWriter[CSVData]($("fakefile.csv"), ',')
 
     assert(wfread.isInstanceOf[Workflow[_,_]])
     assert(trans.isInstanceOf[Workflow[_,_]])
@@ -36,7 +37,7 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
     implicit val rfc: RawFieldsConverter[B1]
     val f: Function[CSVData, B1] = { _ => throw new NotImplementedException("")}
     val mapper = new MapIter[CSVData, B1](f)
-    val writer = new CSVFileWriter[B1]("foo.tsv", '\t')
+    val writer = new CSVFileWriter[B1]($("foo.tsv"), '\t')
     val wseq2 = WorkSequence(mapper, writer)
 
     // Join both sequences
@@ -65,12 +66,12 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
     implicit val klazz3 = classOf[Option[B1]]
 
     val step1 = new ObjectZippedReader[JSONData]()
-    val step2 = new InterceptOutput[JSONData](JSONFileWriter[JSONData]("filename.json"))
+    val step2 = new InterceptOutput[JSONData](JSONFileWriter[JSONData]($("filename.json")))
     val step3 = new Intercept[JSONData, JSONData, Option[B1]](new IdentityWorkflow[JSONData], {
       val w1 = new Mapper[JSONData, B1]((data: JSONData) => data.body)
-      val w2 = new InterceptToBinaryFile[B1]("filename.bin")
+      val w2 = new InterceptToBinaryFile[B1]($("filename.bin"))
       val w3 = new LiftOption[B1]()
-      val w4 = new InterceptToJSON[Option[B1]](filename="filename.json")
+      val w4 = new InterceptToJSON[Option[B1]](filename=$("filename.json"))
       val ws1: WorkSequence[JSONData, B1, B1] = new WorkSequence(w1, w2)
       val ws2: WorkSequence[B1, Option[B1], Option[B1]] = new WorkSequence(w3, w4)
       ws1 ++ ws2

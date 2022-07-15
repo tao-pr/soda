@@ -1,6 +1,7 @@
-package de.tao.soda
+package de.tao.soda.runnable
 
 import de.tao.soda.etl.data.Wget
+import de.tao.soda.{Help, Preset}
 
 private object CommandPrefix {
   val cmd = "-do:"

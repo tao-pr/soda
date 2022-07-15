@@ -5,9 +5,11 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.model.{AmazonS3Exception, ObjectMetadata, S3Object, S3ObjectSummary}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import de.tao.soda.etl._
+import de.tao.soda.etl.data.OutputIdentifier.$
 
 import java.io.{ByteArrayInputStream, File, InputStream, ObjectInputStream}
 import java.util
+import java.util.zip.GZIPInputStream
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 
@@ -47,6 +49,28 @@ class S3ObjectReader[T <:Product with Serializable](
     }
     else {
       logger.error(s"S3ObjectReader : Object does not exist : $fullURI")
+      throw new AmazonS3Exception(s"S3 Object does not exist : $fullURI")
+    }
+  }
+}
+
+// todo: DRY
+class S3ZippedObjectReader[T <:Product with Serializable](
+  bucket: String, override val region: Regions = Regions.DEFAULT_REGION)
+  (implicit val classTag: ClassTag[T]) extends DataLoader[T] with S3Default {
+
+  override def run(input: String) = {
+    val fullURI = s"s3://$bucket/$input"
+    logger.info(s"S3ZippedObjectReader reading ${classTag} from $fullURI (region=${s3.getRegionName})")
+    if (s3.doesObjectExist(bucket, input)){
+      val obj: S3Object = s3.getObject(bucket, input)
+      val reader = new ObjectInputStream(new GZIPInputStream(obj.getObjectContent))
+      val data = reader.readObject().asInstanceOf[T]
+      reader.close()
+      data
+    }
+    else {
+      logger.error(s"S3ZippedObjectReader : Object does not exist : $fullURI")
       throw new AmazonS3Exception(s"S3 Object does not exist : $fullURI")
     }
   }
@@ -108,11 +132,14 @@ class S3BucketReader[T <:Product with Serializable](
 }
 
 class S3Writer[T <: Product with Serializable](
-  bucket: String,  key: String, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
+  bucket: String,  key: OutputIdentifier, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
   (implicit val classTag: ClassTag[T]) extends DataWriter[T] with S3Default {
 
+  import OutputIdentifier._
+
   override def run(input: T): InputIdentifier = {
-    val fullURI = s"s3://$bucket/$key"
+    val objname = key.toString
+    val fullURI = s"s3://$bucket/$objname"
     logger.info(s"S3Writer writing ${classTag} to $fullURI (region=${s3.getRegionName})")
 
     if (!s3.doesBucketExistV2(bucket)){
@@ -120,7 +147,7 @@ class S3Writer[T <: Product with Serializable](
       s3.createBucket(bucket)
     }
 
-    if (s3.doesObjectExist(bucket, key) && !overwrite){
+    if (s3.doesObjectExist(bucket, objname) && !overwrite){
       logger.error(s"S3Writer will not overwrite existing $fullURI")
       throw new AmazonS3Exception(s"S3 key $fullURI already exists")
     }
@@ -129,19 +156,54 @@ class S3Writer[T <: Product with Serializable](
     logger.info(s"S3Writer writing to temp file : ${tempFile.getAbsolutePath}")
     logger.info(s"S3Writer uploading $classTag to $fullURI")
 
-    ObjectWriter(tempFile.getAbsolutePath).run(input)
-    s3.putObject(bucket, key, tempFile)
+    ObjectWriter($(tempFile.getAbsolutePath)).run(input)
+    s3.putObject(bucket, objname, tempFile)
 
     tempFile.delete()
     PathIdentifier(fullURI)
   }
 }
 
-class S3Uploader(bucket: String, key: String, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
+// todo: DRY
+class S3ZippedWriter[T <: Product with Serializable](
+  bucket: String,  key: OutputIdentifier, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
+  (implicit val classTag: ClassTag[T]) extends DataWriter[T] with S3Default {
+
+  import OutputIdentifier._
+
+  override def run(input: T): InputIdentifier = {
+    val objname = key.toString
+    val fullURI = s"s3://$bucket/$objname"
+    logger.info(s"S3ZippedWriter writing ${classTag} to $fullURI (region=${s3.getRegionName})")
+
+    if (!s3.doesBucketExistV2(bucket)){
+      logger.info(s"S3ZippedWriter trying to create bucket s3://${bucket}")
+      s3.createBucket(bucket)
+    }
+
+    if (s3.doesObjectExist(bucket, objname) && !overwrite){
+      logger.error(s"S3ZippedWriter will not overwrite existing $fullURI")
+      throw new AmazonS3Exception(s"S3 key $fullURI already exists")
+    }
+    // Zip object to temp file
+    val tempFile = java.io.File.createTempFile("soda", s"$bucket-$objname")
+    logger.info(s"S3ZippedWriter writing to temp file : ${tempFile.getAbsolutePath}")
+    logger.info(s"S3ZippedWriter uploading $classTag to $fullURI")
+
+    ObjectZippedWriter($(tempFile.getAbsolutePath)).run(input)
+    s3.putObject(bucket, objname, tempFile)
+
+    tempFile.delete()
+    PathIdentifier(objname)
+  }
+}
+
+class S3Uploader(bucket: String, key: OutputIdentifier, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
 extends DataWriter[InputIdentifier] with S3Default {
 
   override def run(input: InputIdentifier) = {
-    val fullURI = s"s3://$bucket/$key"
+    val objname = key.toString
+    val fullURI = s"s3://$bucket/$objname"
     logger.info(s"S3Uploader uploading $input to $fullURI (region=${s3.getRegionName})")
 
     if (!s3.doesBucketExistV2(bucket)){
@@ -149,7 +211,7 @@ extends DataWriter[InputIdentifier] with S3Default {
       s3.createBucket(bucket)
     }
 
-    if (s3.doesObjectExist(bucket, key) && !overwrite){
+    if (s3.doesObjectExist(bucket, objname) && !overwrite){
       logger.error(s"S3Uploader will not overwrite existing $fullURI")
       throw new AmazonS3Exception(s"S3 key $fullURI already exists")
     }
@@ -157,16 +219,19 @@ extends DataWriter[InputIdentifier] with S3Default {
     input match {
       case PathIdentifier(s, _) =>
         val file = new File(s)
-        s3.putObject(bucket, key, file)
+        s3.putObject(bucket, objname, file)
+
+      case StreamIdentifier(s, _) =>
+        s3.putObject(bucket, objname, s, new ObjectMetadata())
 
       case SourceIdentifier(s) =>
         val sreader = s.reader()
         val bytes = LazyList.continually(sreader.read).takeWhile(_ != -1).map(_.toByte).toArray
         val bstream = new ByteArrayInputStream(bytes)
         logger.info(s"S3Uploader uploading ${bytes.length} bytes")
-        s3.putObject(bucket, key, bstream, new ObjectMetadata())
+        s3.putObject(bucket, objname, bstream, new ObjectMetadata())
     }
-    PathIdentifier(fullURI)
+    PathIdentifier(objname)
   }
 }
 

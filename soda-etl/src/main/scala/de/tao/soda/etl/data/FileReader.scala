@@ -9,7 +9,6 @@ import purecsv.unsafe.converter.RawFieldsConverter
 import java.io.{ByteArrayInputStream, File, FileInputStream, ObjectInputStream}
 import java.util.zip.GZIPInputStream
 import scala.reflect.ClassTag
-import scala.util.parsing.input.StreamReader
 
 
 object TextFileReader extends DataReader[Iterable[String]]{
@@ -64,6 +63,8 @@ class JSONReader[T <: Product with Serializable](implicit clazz: Class[T]) exten
       case SourceIdentifier(s) =>
         val content = s.getLines().mkString(" ")
         mapper.readValue[T](content, clazz)
+      case StreamIdentifier(s, encoding) =>
+        mapper.readValue[T](s, clazz)
     }
   }
 }
@@ -87,6 +88,13 @@ class ObjectReader[T <: Product with Serializable] extends DataReader[Option[T]]
         val reader = new ObjectInputStream(new ByteArrayInputStream(bytes))
         val data = Option(reader.readObject().asInstanceOf[T])
         sreader.close()
+        reader.close()
+        data
+
+      case StreamIdentifier(s, _) =>
+        logger.info(s"ObjectReader reading from stream")
+        val reader = new ObjectInputStream(s)
+        val data = Option(reader.readObject().asInstanceOf[T])
         reader.close()
         data
     }
@@ -114,6 +122,14 @@ class ObjectZippedReader[T <: Product with Serializable] extends DataReader[T]{
         val reader = new ObjectInputStream(gzip)
         val data = reader.readObject().asInstanceOf[T]
         sreader.close()
+        reader.close()
+        data
+
+      case StreamIdentifier(s, _) =>
+        logger.info(s"ObjectZippedReader reading from stream")
+        val gzip = new GZIPInputStream(s)
+        val reader = new ObjectInputStream(gzip)
+        val data = reader.readObject().asInstanceOf[T]
         reader.close()
         data
     }

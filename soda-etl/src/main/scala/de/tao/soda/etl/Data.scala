@@ -38,6 +38,13 @@ object Implicits {
   }
 }
 
+case object InputToString extends Workflow[InputIdentifier, String]{
+  override def run(input: InputIdentifier): String = input match {
+    case PathIdentifier(s, _) => s
+    case w => throw new UnsupportedOperationException(s"InputToString cannot parse ${w.getClass.getName} to string. Expect a PathIdentifier instead.")
+  }
+}
+
 
 trait DataReader[T] extends Workflow[InputIdentifier, T]
 trait DataLoader[T] extends Workflow[String, T]

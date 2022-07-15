@@ -2,90 +2,121 @@ package de.tao.soda.etl.data
 
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import de.tao.soda.etl.{DataWriter, InputIdentifier, PathIdentifier}
+import de.tao.soda.etl.{DataWriter, InputIdentifier, PathIdentifier, Workflow}
 import purecsv.unsafe._
 import purecsv.unsafe.converter.RawFieldsConverter
 
 import java.io._
+import java.nio.file.{Files, Paths}
+import java.time.format.DateTimeFormatter
 import java.util.zip.GZIPOutputStream
 
-case class CSVFileWriter[T <: Product with Serializable](filename: String, delimiter: Char)
+trait OutputIdentifier
+case class OutputPath(path: String) extends OutputIdentifier {
+  override def toString: String = path
+}
+class RandomPath(prefix: String, ext: String, randomizer: () => (String)) extends OutputIdentifier {
+  val _ext = if (ext.startsWith(".")) ext else "." + ext
+  override def toString: String = s"${prefix}${randomizer()}${_ext}"
+}
+case class UUIDPath(prefix: String, ext: String) extends RandomPath(prefix, ext, ()=>java.util.UUID.randomUUID().toString)
+case class TimestampPath(prefix: String, fmt: DateTimeFormatter, ext: String) extends RandomPath(prefix, ext, ()=>java.time.LocalDateTime.now().format(fmt))
+
+object OutputIdentifier {
+  def $(s: String) = OutputPath(s) // shorthand
+}
+
+case class EnsureDirExists[T](pathName: String) extends Workflow[T, T] {
+  override def run(input: T): T = {
+    logger.info(s"EnsureDirExists : ${pathName}")
+    Files.createDirectories(Paths.get(pathName))
+    input
+  }
+}
+
+case class CSVFileWriter[T <: Product with Serializable](filename: OutputIdentifier, delimiter: Char)
   (implicit val rc: RawFieldsConverter[T])
   extends DataWriter[Iterable[T]] {
 
   override def run(input: Iterable[T]): InputIdentifier = {
     val headerOpt = input.headOption.map(_.productElementNames.toList)
-    logger.info(s"CSVFileWriter writing file to $filename, with headers = $headerOpt")
+    val fname = filename.toString
+    logger.info(s"CSVFileWriter writing file to $fname, with headers = $headerOpt")
 
     val csv = new CSVIterable[T](input)
-    csv.writeCSVToFileName(filename, delimiter.toString, headerOpt)
-    PathIdentifier(filename)
+    csv.writeCSVToFileName(fname, delimiter.toString, headerOpt)
+    PathIdentifier(fname)
   }
 }
 
-case class CSVFileIteratorWriter[T <: Product with Serializable](filename: String, delimiter: Char)
+case class CSVFileIteratorWriter[T <: Product with Serializable](filename: OutputIdentifier, delimiter: Char)
 (implicit val rc: RawFieldsConverter[T])
   extends DataWriter[Iterator[T]] {
 
   override def run(input: Iterator[T]): InputIdentifier = {
     val list = input.toList
     val headerOpt = list.headOption.map(_.productElementNames.toList)
-    logger.info(s"CSVFileWriter writing file to $filename, with headers = $headerOpt")
+    val fname = filename.toString
+    logger.info(s"CSVFileWriter writing file to $fname, with headers = $headerOpt")
 
     val csv = new CSVIterable[T](list)
-    csv.writeCSVToFileName(filename, delimiter.toString, headerOpt)
-    PathIdentifier(filename)
+    csv.writeCSVToFileName(fname, delimiter.toString, headerOpt)
+    PathIdentifier(fname)
   }
 }
 
-case class JSONFileWriter[T <: Product with Serializable](filename: String)(implicit clazz: Class[T]) extends DataWriter[T] {
+case class JSONFileWriter[T <: Product with Serializable](filename: OutputIdentifier)(implicit clazz: Class[T]) extends DataWriter[T] {
   lazy val mapper: JsonMapper = JsonMapper.builder()
     .addModule(DefaultScalaModule)
     .build()
 
   override def run(input: T): InputIdentifier = {
-    logger.info(s"JSONFileWriter writing file to $filename")
+    val fname = filename.toString
+    logger.info(s"JSONFileWriter writing file to $fname")
 
-    val ostream = new FileOutputStream(new File(filename))
+    val ostream = new FileOutputStream(new File(fname))
     mapper.writeValue(ostream, input)
-    PathIdentifier(filename)
+    PathIdentifier(fname)
   }
 }
 
-case class TextFileWriter[T <: Product with Serializable](filename: String) extends DataWriter[Iterable[T]] {
+case class TextFileWriter[T <: Product with Serializable](filename: OutputIdentifier) extends DataWriter[Iterable[T]] {
   override def run(input: Iterable[T]): InputIdentifier = {
-    logger.info(s"TextFileWriter writing file to $filename")
-    val bufWriter = new BufferedWriter(new FileWriter(filename))
+    val fname = filename.toString
+    logger.info(s"TextFileWriter writing file to $fname")
+    val bufWriter = new BufferedWriter(new FileWriter(fname))
     input.foreach{ entry => bufWriter.write(entry.toString() + "\n") }
     bufWriter.close()
-    PathIdentifier(filename)
+    PathIdentifier(fname)
   }
 }
 
-case class ObjectWriter[T <: Product with Serializable](filename: String) extends DataWriter[T]{
+case class ObjectWriter[T <: Product with Serializable](filename: OutputIdentifier) extends DataWriter[T]{
   override def run(input: T): InputIdentifier = {
-    logger.info(s"ObjectWriter writing to $filename")
-    val writer = new ObjectOutputStream(new FileOutputStream(filename))
+    val fname = filename.toString
+    logger.info(s"ObjectWriter writing to $fname")
+    val writer = new ObjectOutputStream(new FileOutputStream(fname))
     writer.writeObject(input)
     writer.close()
-    PathIdentifier(filename)
+    PathIdentifier(fname)
   }
 }
 
-case class ObjectZippedWriter[T <: Product with Serializable](filename: String) extends DataWriter[T]{
+case class ObjectZippedWriter[T <: Product with Serializable](filename: OutputIdentifier) extends DataWriter[T]{
   override def run(input: T): InputIdentifier = {
-    logger.info(s"ObjectZippedWriter writing to $filename")
-    val gzip = new GZIPOutputStream(new FileOutputStream(filename))
+    val fname = filename.toString
+    logger.info(s"ObjectZippedWriter writing to $fname")
+    val gzip = new GZIPOutputStream(new FileOutputStream(fname))
     val writer = new ObjectOutputStream(gzip)
     writer.writeObject(input)
     writer.close()
-    PathIdentifier(filename)
+    PathIdentifier(fname)
   }
 }
 
 object ObjectWriter {
-  def saveToFile[T <: Product with Serializable](data: T, filename: String): InputIdentifier ={
+  def saveToFile[T <: Product with Serializable](data: T, filename: OutputIdentifier): InputIdentifier = {
+    val fname = filename.toString
     ObjectWriter(filename).run(data, false)
-    PathIdentifier(filename)
   }
 }
