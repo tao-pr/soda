@@ -20,15 +20,16 @@ class GenerateBrackets(num: Int) extends Generator[Iterable[Bracket]]{
 
 object UploadZippedS3 extends App with LazyLogging {
   val bucket = "soda-test-brakets"
-  val num = 20
+  val num = 5
 
   implicit val clz = classOf[Bracket]
-  val uidNameGen = UUIDPath("soda", ".gz")
+  val uidZipNameGen = UUIDPath("soda", ".gz")
+  val uidJsonNameGen = UUIDPath("soda-fromzip-", ".json")
 
-  lazy val subWorkflow = new S3ZippedWriter[Bracket](bucket, uidNameGen, Regions.EU_CENTRAL_1) +>
+  lazy val subWorkflow = new S3ZippedWriter[Bracket](bucket, uidZipNameGen, Regions.EU_CENTRAL_1) +>
     InputToString +>
     new S3ZippedObjectReader[Bracket](bucket, Regions.EU_CENTRAL_1) +>
-    new JSONFileWriter[Bracket](uidNameGen)
+    new JSONFileWriter[Bracket](uidJsonNameGen)
 
   lazy val workflow = new GenerateBrackets(num) +> new MapWithWorkflow[Bracket, InputIdentifier](subWorkflow)
 
