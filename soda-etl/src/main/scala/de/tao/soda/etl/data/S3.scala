@@ -156,7 +156,7 @@ class S3Writer[T <: Product with Serializable](
     logger.info(s"S3Writer writing to temp file : ${tempFile.getAbsolutePath}")
     logger.info(s"S3Writer uploading $classTag to $fullURI")
 
-    ObjectWriter($(tempFile.getAbsolutePath)).run(input)
+    WriteAsObject($(tempFile.getAbsolutePath)).run(input)
     s3.putObject(bucket, objname, tempFile)
 
     tempFile.delete()
@@ -190,7 +190,7 @@ class S3ZippedWriter[T <: Product with Serializable](
     logger.info(s"S3ZippedWriter writing to temp file : ${tempFile.getAbsolutePath}")
     logger.info(s"S3ZippedWriter uploading $classTag to $fullURI")
 
-    ObjectZippedWriter($(tempFile.getAbsolutePath)).run(input)
+    WriteAsZippedObject($(tempFile.getAbsolutePath)).run(input)
     s3.putObject(bucket, objname, tempFile)
 
     tempFile.delete()

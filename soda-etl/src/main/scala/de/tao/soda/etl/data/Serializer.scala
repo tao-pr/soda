@@ -12,13 +12,13 @@ abstract class Serializer[T] extends Workflow[T, Array[Byte]]
 
 abstract class Deserializer[T] extends Workflow[Array[Byte], T]
 
-class JSONSerializer[T <: Product with Serializable](implicit clazz: Class[T]) extends Serializer[T] {
+class SerializeJSON[T <: Product with Serializable](implicit clazz: Class[T]) extends Serializer[T] {
   lazy val mapper: JsonMapper = JsonMapper.builder()
     .addModule(DefaultScalaModule)
     .build()
 
   override def run(input: T): Array[Byte] = {
-    logger.info(s"JSONFileWriter writing $clazz")
+    logger.info(s"SerializeJSON writing $clazz")
 
     val ostream = new ByteArrayOutputStream()
     mapper.writeValue(ostream, input)
@@ -27,13 +27,13 @@ class JSONSerializer[T <: Product with Serializable](implicit clazz: Class[T]) e
   }
 }
 
-class JSONDeserializer[T <: Product with Serializable](implicit clazz: Class[T]) extends Deserializer[T]{
+class DeserializeJSON[T <: Product with Serializable](implicit clazz: Class[T]) extends Deserializer[T]{
   lazy val mapper: JsonMapper = JsonMapper.builder()
     .addModule(DefaultScalaModule)
     .build()
 
   override def run(input: Array[Byte]) = {
-    logger.info(s"JSONDeserializer reading ${clazz.getName} ${input.size} bytes")
+    logger.info(s"DeserializeJSON reading ${clazz.getName} ${input.size} bytes")
     mapper.readValue[T](new ByteArrayInputStream(input), clazz)
   }
 }

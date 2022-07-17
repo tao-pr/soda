@@ -14,7 +14,7 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
 
   it should "read CSV file" in {
 
-    val csv = CSVFileReader[CSVData](',').run(csvTest)
+    val csv = ReadCSV[CSVData](',').run(csvTest)
     assert(csv.isInstanceOf[Iterator[CSVData]])
 
     val csvList = csv.toList
@@ -25,7 +25,7 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
   it should "read JSON file" in {
 
     implicit val csvDataClass = classOf[JSONData]
-    val json = new JSONReader[JSONData].run(jsonTest)
+    val json = new ReadJSON[JSONData].run(jsonTest)
 
     assert(json.isInstanceOf[JSONData])
     assert(json.header.p.isEmpty)
@@ -39,11 +39,11 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
 
     // serialise
     val tempFile = java.io.File.createTempFile("sodatest", "jsondata")
-    val serialiser = ObjectWriter[JSONList]($(tempFile.getAbsolutePath))
+    val serialiser = WriteAsObject[JSONList]($(tempFile.getAbsolutePath))
     serialiser.run(src)
 
     // deserialiser
-    val deserialiser = new ObjectReader[JSONList]
+    val deserialiser = new ReadAsObjectOpt[JSONList]
     val destOpt = deserialiser.run(PathIdentifier(tempFile.getAbsolutePath))
     assert(destOpt.isDefined)
     assert(destOpt.get.arr.size == 5100)
@@ -60,11 +60,11 @@ class FileSpec extends AnyFlatSpec with BeforeAndAfter {
 
     // serialise
     val tempFile = java.io.File.createTempFile("sodatest", "jsonzipped")
-    val serialiser = ObjectZippedWriter[JSONList](OutputPath(tempFile.getAbsolutePath))
+    val serialiser = WriteAsZippedObject[JSONList](OutputPath(tempFile.getAbsolutePath))
     serialiser.run(src)
 
     // deserialiser
-    val deserialiser = new ObjectZippedReader[JSONList]
+    val deserialiser = new ReadZippedAsObject[JSONList]
     val destOpt = deserialiser.run(PathIdentifier(tempFile.getAbsolutePath))
     assert(destOpt.arr.size == 5100)
     assert(destOpt.arr.head.header.title == "title")

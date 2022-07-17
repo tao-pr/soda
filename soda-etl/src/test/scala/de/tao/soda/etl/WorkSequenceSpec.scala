@@ -1,6 +1,6 @@
 package de.tao.soda.etl
 
-import de.tao.soda.etl.data.{CSVFileReader, CSVFileWriter, JSONFileWriter, ObjectZippedReader, OutputPath}
+import de.tao.soda.etl.data.{ReadCSV, WriteAsCSV, WriteAsJSON, ReadZippedAsObject, OutputPath}
 import de.tao.soda.etl.workflow.{Intercept, InterceptOutput, InterceptToBinaryFile, InterceptToCSV, InterceptToJSON, MapIter, Mapper, WorkSequence}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
@@ -12,9 +12,9 @@ import purecsv.unsafe.converter.RawFieldsConverter
 class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
 
   it should "connect workflows together" in {
-    val wfread: DataReader[Iterator[CSVData]] = CSVFileReader[CSVData](',')
+    val wfread: DataReader[Iterator[CSVData]] = ReadCSV[CSVData](',')
     val trans = new ToIterable[CSVData]
-    val wfwrite: DataWriter[Iterable[CSVData]] = CSVFileWriter[CSVData]($("fakefile.csv"), ',')
+    val wfwrite: DataWriter[Iterable[CSVData]] = WriteAsCSV[CSVData]($("fakefile.csv"), ',')
 
     assert(wfread.isInstanceOf[Workflow[_,_]])
     assert(trans.isInstanceOf[Workflow[_,_]])
@@ -24,38 +24,38 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
 
     assert(wseq.isInstanceOf[WorkSequence[_,_,_]])
     assert(wseq.steps.map(_.getClass.getName) == List(
-      "de.tao.soda.etl.data.CSVFileReader",
+      "de.tao.soda.etl.data.ReadCSV",
       "de.tao.soda.etl.ToIterable",
-      "de.tao.soda.etl.data.CSVFileWriter"))
+      "de.tao.soda.etl.data.WriteAsCSV"))
   }
 
   it should "append a WorkSequence with another WorkSequence" in {
-    val wfread: DataReader[Iterator[CSVData]] = CSVFileReader[CSVData](',')
+    val wfread: DataReader[Iterator[CSVData]] = ReadCSV[CSVData](',')
     val trans = new ToIterable[CSVData]
     val wseq1 = WorkSequence(wfread, trans)
 
     implicit val rfc: RawFieldsConverter[B1]
     val f: Function[CSVData, B1] = { _ => throw new NotImplementedException("")}
     val mapper = new MapIter[CSVData, B1](f)
-    val writer = new CSVFileWriter[B1]($("foo.tsv"), '\t')
+    val writer = new WriteAsCSV[B1]($("foo.tsv"), '\t')
     val wseq2 = WorkSequence(mapper, writer)
 
     // Join both sequences
     val joined = wseq1 ++ wseq2
     assert(joined.isInstanceOf[WorkSequence[_,_,_]])
     assert(joined.steps.map(_.getClass.getName) == List(
-      "de.tao.soda.etl.data.CSVFileReader",
+      "de.tao.soda.etl.data.ReadCSV",
       "de.tao.soda.etl.ToIterable",
       "de.tao.soda.etl.workflow.MapIter",
-      "de.tao.soda.etl.data.CSVFileWriter"
+      "de.tao.soda.etl.data.WriteAsCSV"
     ))
 
     assert(joined.printTree() ==
       """
-        |+--CSVFileReader
+        |+--ReadCSV
         |+--ToIterable
         |+--MapIter
-        |+--CSVFileWriter
+        |+--WriteAsCSV
         |""".stripMargin.tail.stripLineEnd)
   }
 
@@ -65,8 +65,8 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
     implicit val klazz2 = classOf[B1]
     implicit val klazz3 = classOf[Option[B1]]
 
-    val step1 = new ObjectZippedReader[JSONData]()
-    val step2 = new InterceptOutput[JSONData](JSONFileWriter[JSONData]($("filename.json")))
+    val step1 = new ReadZippedAsObject[JSONData]()
+    val step2 = new InterceptOutput[JSONData](WriteAsJSON[JSONData]($("filename.json")))
     val step3 = new Intercept[JSONData, JSONData, Option[B1]](new IdentityWorkflow[JSONData], {
       val w1 = new Mapper[JSONData, B1]((data: JSONData) => data.body)
       val w2 = new InterceptToBinaryFile[B1]($("filename.bin"))
@@ -81,12 +81,12 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
 
     assert(wseq.printTree() ==
       """
-      |+--ObjectZippedReader
+      |+--ReadZippedAsObject
       |+--InterceptOutput
       ||  +--[self]
       ||  |  +--IdentityWorkflow
       ||  +--[plex]
-      ||  |  +--JSONFileWriter
+      ||  |  +--WriteAsJSON
       |+--Intercept
       ||  +--[self]
       ||  |  +--IdentityWorkflow
@@ -96,13 +96,13 @@ class WorkSequenceSpec extends AnyFlatSpec with BeforeAndAfter {
       ||  |  |  +--[self]
       ||  |  |  |  +--IdentityWorkflow
       ||  |  |  +--[plex]
-      ||  |  |  |  +--ObjectWriter
+      ||  |  |  |  +--WriteAsObject
       ||  |  +--LiftOption
       ||  |  +--InterceptToJSON
       ||  |  |  +--[self]
       ||  |  |  |  +--IdentityWorkflow
       ||  |  |  +--[plex]
-      ||  |  |  |  +--JSONFileWriter
+      ||  |  |  |  +--WriteAsJSON
       |""".stripMargin.tail.stripLineEnd)
 
   }

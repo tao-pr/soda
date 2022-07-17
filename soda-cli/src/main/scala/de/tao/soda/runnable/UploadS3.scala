@@ -4,7 +4,7 @@ import com.amazonaws.regions.Regions
 import com.typesafe.scalalogging.LazyLogging
 import de.tao.soda.Domain.SimpleRow
 import de.tao.soda.etl.Generator
-import de.tao.soda.etl.data.{CSVFileWriter, OutputPath, S3Uploader, TimestampPath}
+import de.tao.soda.etl.data.{WriteAsCSV, S3Uploader, TimestampPath}
 
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -23,7 +23,7 @@ object UploadS3 extends App with LazyLogging {
 
   val fmt = DateTimeFormatter.ofPattern("yyyyMMdd")
   lazy val workflow = new GenerateList(num) +>
-    new CSVFileWriter[SimpleRow](TimestampPath("soda-test", fmt, ".csv"), ',') +>
+    new WriteAsCSV[SimpleRow](TimestampPath("soda-test", fmt, ".csv"), ',') +>
     new S3Uploader(bucket, TimestampPath("soda-test", fmt, ".csv"), Regions.EU_CENTRAL_1)
 
   logger.info("[UploadS3] app starting")

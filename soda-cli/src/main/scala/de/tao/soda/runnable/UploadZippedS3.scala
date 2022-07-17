@@ -3,10 +3,9 @@ package de.tao.soda.runnable
 import com.amazonaws.regions.Regions
 import com.typesafe.scalalogging.LazyLogging
 import de.tao.soda.Domain._
-import de.tao.soda.etl.{Generator, InputIdentifier, InputToString}
-import de.tao.soda.etl.data.{JSONFileWriter, S3ObjectReader, S3Writer, S3ZippedObjectReader, S3ZippedWriter, UUIDPath}
+import de.tao.soda.etl.data.{WriteAsJSON, S3ZippedObjectReader, S3ZippedWriter, UUIDPath}
 import de.tao.soda.etl.workflow.MapWithWorkflow
-import de.tao.soda.runnable.UploadS3.{logger, workflow}
+import de.tao.soda.etl.{Generator, InputIdentifier, InputToString}
 
 class GenerateBrackets(num: Int) extends Generator[Iterable[Bracket]]{
   override def run(input: Unit): Iterable[Bracket] = {
@@ -29,7 +28,7 @@ object UploadZippedS3 extends App with LazyLogging {
   lazy val subWorkflow = new S3ZippedWriter[Bracket](bucket, uidZipNameGen, Regions.EU_CENTRAL_1) +>
     InputToString +>
     new S3ZippedObjectReader[Bracket](bucket, Regions.EU_CENTRAL_1) +>
-    new JSONFileWriter[Bracket](uidJsonNameGen)
+    new WriteAsJSON[Bracket](uidJsonNameGen)
 
   lazy val workflow = new GenerateBrackets(num) +> new MapWithWorkflow[Bracket, InputIdentifier](subWorkflow)
 

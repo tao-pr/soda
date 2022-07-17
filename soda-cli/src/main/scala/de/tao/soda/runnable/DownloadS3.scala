@@ -3,7 +3,7 @@ package de.tao.soda.runnable
 import com.amazonaws.regions.Regions
 import com.typesafe.scalalogging.LazyLogging
 import de.tao.soda.Domain.{PolishedRow, SimpleRow}
-import de.tao.soda.etl.data.{CSVFileIteratorWriter, CSVFileReader, OutputPath, S3StreamReader, TimestampPath}
+import de.tao.soda.etl.data.{WriteIteratorAsCSV, ReadCSV, OutputPath, S3StreamReader, TimestampPath}
 import de.tao.soda.etl.workflow.{FilterIterator, MapIterator}
 
 import java.time.format.DateTimeFormatter
@@ -18,10 +18,10 @@ object DownloadS3 extends App with LazyLogging {
   val bucket = "soda-test-123"
 
   lazy val workflow = new S3StreamReader(bucket, "utf-8", Regions.EU_CENTRAL_1) +>
-    new CSVFileReader[SimpleRow](',') +>
+    new ReadCSV[SimpleRow](',') +>
     new Polisher() +>
     new FilterIterator[PolishedRow](_.value > 0) +>
-    new CSVFileIteratorWriter[PolishedRow](OutputPath("soda-polished.csv"), ',')
+    new WriteIteratorAsCSV[PolishedRow](OutputPath("soda-polished.csv"), ',')
 
   val fmt = DateTimeFormatter.ofPattern("yyyyMMdd")
   workflow.run(TimestampPath("soda-test", fmt, ".csv").toString)

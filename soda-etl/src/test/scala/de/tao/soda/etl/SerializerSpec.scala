@@ -12,14 +12,14 @@ class SerializerSpec extends AnyFlatSpec with BeforeAndAfter {
 
   it should "serialise and deserialise JSON" in {
     implicit val jsonDataClass = classOf[JSONData]
-    val json = new JSONReader[JSONData].run(jsonTest)
+    val json = new ReadJSON[JSONData].run(jsonTest)
 
     // serialise
-    val bytes = new JSONSerializer[JSONData].run(json)
+    val bytes = new SerializeJSON[JSONData].run(json)
     assert(bytes.nonEmpty)
 
     // deserialise
-    val djson = new JSONDeserializer[JSONData].run(bytes)
+    val djson = new DeserializeJSON[JSONData].run(bytes)
     assert(djson.isInstanceOf[JSONData])
     assert(djson == json)
   }
