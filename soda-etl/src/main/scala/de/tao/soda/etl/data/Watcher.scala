@@ -1,15 +1,19 @@
 package de.tao.soda.etl.data
 
 import better.files.File
+
 import java.nio.file.{Path, Paths}
 import de.tao.soda.etl.{DataLoader, InputIdentifier, Workflow}
 import io.methvin.better.files.RecursiveFileMonitor
+
+import scala.concurrent.ExecutionContext
 
 /**
  * Directory watcher
  * binds with a Workflow which takes a fullpath to the file to process
  */
-class Watcher[T](pipeCreate: Option[Workflow[String, T]], pipeDelete: Option[Workflow[String, T]]) extends DataLoader[Unit] {
+class Watcher[T](pipeCreate: Option[Workflow[String, T]], pipeDelete: Option[Workflow[String, T]])
+  (implicit val ec: ExecutionContext) extends DataLoader[Unit] {
 
   override def run(input: String): Unit = {
     logger.info(s"Watcher start watching $input")
@@ -37,6 +41,7 @@ class Watcher[T](pipeCreate: Option[Workflow[String, T]], pipeDelete: Option[Wor
         else logger.info(s"Watch ignoring a DELETE signal: $file")
       }
     }
+    watcher.start()
   }
 
   override def printTree(level: Int): String = {
