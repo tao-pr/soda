@@ -28,9 +28,3 @@ private final case object DataGenerator extends DataLoader[Iterable[Record]] {
       Record(4, "azz", Array(2.5, 3.36, 2.001))
     )
 }
-
-final class DataSerialiser extends Preset {
-  private val workflow = DataGenerator :: ??? :: Nil // todo:
-
-  override def run(): Unit = ???
-}

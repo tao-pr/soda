@@ -31,6 +31,11 @@ case class WorkSequence[T0, T1, T2](head: Workflow[T0, T1], next: Workflow[T1, T
   override def printTree(level: Int=0): String = {
     steps.map(_.printTree(level)).mkString("\n")
   }
+
+  override def shutdownHook(): Unit = {
+    head.shutdownHook()
+    next.shutdownHook()
+  }
 }
 
 object WorkSequence {

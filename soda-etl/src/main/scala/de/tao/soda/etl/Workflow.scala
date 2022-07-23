@@ -11,6 +11,7 @@ trait Workflow[T1, T2] extends Serializable with LazyLogging {
   def +>[T3](next: Workflow[T2,T3]): Workflow[T1,T3] = {
     WorkSequence.join(this, next)
   }
+  def shutdownHook(): Unit = {}
 }
 
 trait IsoWorkflow[T] extends Workflow[T, T]
@@ -33,6 +34,11 @@ trait Multiplexer[T0, T1, T2] extends Workflow[T0, T1] {
       self.printTree(nlevel+1) + "\n" +
       s"${prefixTree(nlevel)}[plex]" + "\n" +
       plex.printTree(nlevel+1)
+  }
+
+  override def shutdownHook(): Unit = {
+    self.shutdownHook()
+    plex.shutdownHook()
   }
 }
 

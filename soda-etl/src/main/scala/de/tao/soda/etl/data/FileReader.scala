@@ -144,7 +144,7 @@ class ReadZippedAsObject[T <: Product with Serializable] extends DataReader[T]{
   }
 }
 
-final object ReadAsObjectOpt {
+object ReadAsObjectOpt {
   def loadFromFile[T <: Product with Serializable](filename: String): Option[T] = {
     val input = PathIdentifier(filename)
     new ReadAsObjectOpt[T].run(input)

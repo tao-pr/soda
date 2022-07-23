@@ -48,7 +48,7 @@ case object InputToString extends Workflow[InputIdentifier, String]{
 
 trait DataReader[T] extends Workflow[InputIdentifier, T]
 trait DataLoader[T] extends Workflow[String, T]
-trait DataDumper[T] extends Workflow[T, InputIdentifier]
+trait DataDumper[T] extends Workflow[T, Unit]
 trait DataWriter[T] extends Workflow[T, InputIdentifier]
 trait DataIntercept[T] extends IsoWorkflow[T] {
   def intercept(data: T): Unit
