@@ -2,7 +2,6 @@ package de.tao.soda.etl.data
 
 import de.tao.soda.etl.{DataLoader, Workflow}
 
-import scala.util.Try
 
 object DB {
   trait Secret {

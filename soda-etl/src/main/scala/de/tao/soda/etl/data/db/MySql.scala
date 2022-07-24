@@ -4,7 +4,6 @@ import de.tao.soda.etl.data.{DB, ReadFromDB, ReadIteratorFromDB, WriteToDB}
 
 import java.sql.{Connection, DriverManager, ResultSet, Statement}
 import scala.collection.mutable.ArrayBuffer
-import scala.util.Try
 
 trait MySql {
   val Key = "mysql"
@@ -77,7 +76,7 @@ class WriteToMySql[T <: AnyRef](override val config: DB.MySqlConfig, prewriteSql
     }
     val fieldMap = DB.caseClassToMap(data.head)
     val valueMap = fieldMap.map{ case (_,v) => if (v.isInstanceOf[String]) s"'$v'" else v.toString }
-    val sql = s"INSERT INTO ${config.table} (${fieldMap.keys.mkString(",")}) VALUES ($valueMap)"
+    val sql = s"INSERT INTO `${config.table}` (${fieldMap.keys.mkString(",")}) VALUES ($valueMap)"
     val n = smt.executeUpdate(sql)
     logger.info(s"WriteToMySql : written $n rows")
     data
