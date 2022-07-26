@@ -43,7 +43,8 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       scalaTest,
       scalaTestLactic,
       dirWatcher,
-      snappy
+      snappy,
+      mysql
     )
   )
 
@@ -66,3 +67,5 @@ resolvers += Resolver.sonatypeRepo("releases")
 
 // Doesn't work with sbt console -> "run" or "runMain"
 mainClass / run := Some("de.tao.soda.Main")
+
+
