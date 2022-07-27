@@ -17,7 +17,7 @@ trait MySql {
 
   protected def makeSelect[T](query: Map[String, Any], config: DB.MySqlConfig, secret: DB.Secret): (Statement, String) = {
     val cond = if (query.isEmpty) ""
-    else query.map { case (k, v) => s"$k $v" }.mkString(" and ")
+    else " WHERE " + query.map { case (k, v) => s"`$k` $v" }.mkString(" and ")
 
     conn = Some(connection(config, secret))
     val smt = conn.get.createStatement()
@@ -30,7 +30,7 @@ override val config: DB.MySqlConfig,
 override val secret: DB.Secret,
 parser: (ResultSet => T)) extends ReadFromDB[T] with MySql {
 
-  override def read(query: Map[String, AnyVal]): Iterable[T] = {
+  override def read(query: Map[String, Any]): Iterable[T] = {
 
     val (smt, sql) = makeSelect[T](query, config, secret)
     val rs = smt.executeQuery(sql)
@@ -87,11 +87,15 @@ prewriteSql: Option[String]=None) extends WriteToDB[T] with MySql {
     }
 
     if (data.nonEmpty) {
-      val fieldMap = DB.caseClassToMap(data.head)
-      val valueMap = fieldMap.map { case (_, v) => if (v.isInstanceOf[String]) s"'$v'" else v.toString }
-      val sql = s"INSERT INTO `${config.table}` (${fieldMap.keys.map(k => s"`${k}`").mkString(",")}) VALUES (${valueMap.mkString(",")})"
-      val n = smt.executeUpdate(sql)
-      logger.info(s"WriteToMySql : written $n rows")
+      val num = data.map{ rec =>
+        val fieldMap = DB.caseClassToMap(rec)
+        val valueMap = fieldMap.map { case (_, v) => if (v.isInstanceOf[String]) s"'$v'" else v.toString }
+        val sql = s"INSERT INTO `${config.table}` (${fieldMap.keys.map(k => s"`${k}`").mkString(",")}) VALUES (${valueMap.mkString(",")})"
+        logger.info(sql) // todo:
+        smt.executeUpdate(sql)
+      }.sum
+
+      logger.info(s"WriteToMySql : written $num rows")
       data
     }
     else {

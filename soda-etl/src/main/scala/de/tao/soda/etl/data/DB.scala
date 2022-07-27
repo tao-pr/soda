@@ -39,12 +39,12 @@ object DB {
 }
 
 trait ReadFromDB[T] extends DataQuery[Iterable[T]]{
-  def read(query: Map[String, AnyVal]): Iterable[T]
+  def read(query: Map[String, Any]): Iterable[T]
 
   val config: DB.ConnectionConfig
   val secret: DB.Secret
 
-  override def run(input: Map[String, AnyVal]): Iterable[T] = {
+  override def run(input: Map[String, Any]): Iterable[T] = {
     logger.info(s"${this.getClass.getName} reading from storage: $config")
     read(input)
   }
@@ -56,7 +56,7 @@ trait ReadIteratorFromDB[T] extends DataQuery[Iterator[T]]{
   val config: DB.ConnectionConfig
   val secret: DB.Secret
 
-  override def run(input: Map[String, AnyVal]): Iterator[T] = {
+  override def run(input: Map[String, Any]): Iterator[T] = {
     logger.info(s"${this.getClass.getName} reading iterator from storage: $config")
     read(input)
   }

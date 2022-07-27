@@ -9,6 +9,6 @@ object Domain {
   case class JSONList(arr: Array[JSONData])
 
   // For DBSpec
-  case class MySqlFoo(uuid: String, name: String, code: Int, baz: Double)
+  case class MySqlFoo(uuid: String, name: String, code: Long, baz: Double)
 
 }
