@@ -27,3 +27,5 @@ jobs:
       run: ./init-test-dependencies.sh
     - name: Run tests
       run: sbt test
+    - name: Tear down
+      run: ./stop-test-dependencies.sh

@@ -25,6 +25,12 @@ mysql -h localhost --protocol=TCP -uroot -p
 # enter the root password as described in docker-compose file
 ```
 
+After tests, you can tear down all dependencies by 
+
+```shell
+./stop-test-dependencies.sh
+```
+
 
 ### soda-cli
 
