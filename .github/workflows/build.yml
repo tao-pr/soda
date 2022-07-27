@@ -23,8 +23,8 @@ jobs:
         distribution: 'temurin'
     - name: Set up dependencies
       run: docker-compose -f docker-compose-testsuite.yaml up -d --no-recreate
-    - name: Sleep
-      run: sleep 10s
+    - name: Wait for instances to be ready
+      run: sleep 15s
     - name: Check mysql instance
       run: docker ps -a -q --filter name=mysql-soda-test
     - name: Set up mock data

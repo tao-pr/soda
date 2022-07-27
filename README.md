@@ -1,6 +1,16 @@
 # Soda
 
-Soda is a data project which makes it easier to setup a quick ETL for ML pipeline on AWS or on local development environment.
+Soda is a data API for building typesafe & composable processing pipeline. Soda now supports:
+
+- Read/Write common physical file formats (csv, tsv, json, zipped)
+- Read/Write relational databases : mysql
+- Event-driven directory watch to trigger pipeline
+- AWS s3 as part of pipeline
+- Serialisation and compression
+- wget as part of the pipeline
+- Sequence pipeline
+- Nested pipeline
+- Branched pipeline
 
 ## Build & Run
 
@@ -34,7 +44,7 @@ After tests, you can tear down all dependencies by
 
 ### soda-cli
 
-Some sample CLI and runnables are in this project (see in soda-cli/main/scala/de/tao/soda/runnable)
+Collection of sample runnable workflows are in here (see in soda-cli/main/scala/de/tao/soda/runnable)
 
 
 ## Getting started

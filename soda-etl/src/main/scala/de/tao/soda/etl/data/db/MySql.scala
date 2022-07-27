@@ -91,7 +91,6 @@ prewriteSql: Option[String]=None) extends WriteToDB[T] with MySql {
         val fieldMap = DB.caseClassToMap(rec)
         val valueMap = fieldMap.map { case (_, v) => if (v.isInstanceOf[String]) s"'$v'" else v.toString }
         val sql = s"INSERT INTO `${config.table}` (${fieldMap.keys.map(k => s"`${k}`").mkString(",")}) VALUES (${valueMap.mkString(",")})"
-        logger.info(sql) // todo:
         smt.executeUpdate(sql)
       }.sum
 

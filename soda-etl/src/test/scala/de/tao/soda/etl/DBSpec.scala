@@ -1,12 +1,10 @@
 package de.tao.soda.etl
 
-import de.tao.soda.etl.data.db.{ReadFromMySql, WriteToMySql}
-import org.scalactic.source.Position
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
-import org.scalatest.flatspec.AnyFlatSpec
+import de.tao.soda.etl.Domain.MySqlFoo
 import de.tao.soda.etl.data.DB
-import Domain.{MySqlFoo, _}
-import com.google.common.primitives.UnsignedInts
+import de.tao.soda.etl.data.db.{ReadFromMySql, WriteToMySql}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.flatspec.AnyFlatSpec
 
 import java.sql.ResultSet
 
