@@ -23,6 +23,8 @@ jobs:
         distribution: 'temurin'
     - name: Set up dependencies
       run: docker-compose -f docker-compose-testsuite.yaml up -d --no-recreate
+    - name: Check mysql instance
+      run: echo "mysql container: $(docker ps -a -q --filter name=mysql-soda-test)"
     - name: Set up mock data
       run: ./init-test-dependencies.sh
     - name: Run tests
