@@ -21,5 +21,9 @@ jobs:
       with:
         java-version: '11'
         distribution: 'temurin'
+    - name: Set up dependencies
+      run: docker-compose -f docker-compose-testsuite.yaml up -d --no-recreate
+    - name: Set up mock data
+      run: ./init-test-dependencies.sh
     - name: Run tests
       run: sbt test
