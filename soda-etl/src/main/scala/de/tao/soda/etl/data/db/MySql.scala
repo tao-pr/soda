@@ -8,7 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 trait MySql {
 
   def connection(config: DB.MySqlConfig, secret: DB.Secret): Connection = {
-    val url = s"jdbc:mysql://${config.host}:${config.port}/mysql"
+    val url = s"jdbc:mysql://${config.host}:${config.port}/${config.db}"
     Class.forName("com.mysql.cj.jdbc.Driver")
     DriverManager.getConnection(url, secret.getUser.getOrElse(""), secret.getPwd.getOrElse(""))
   }

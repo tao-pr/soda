@@ -26,6 +26,10 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     val out = mysqlRead.run(query)
     assert(out.size == 1)
+    assert(out.head.uuid == "9a02de5b-9449-466d-9269-ba798e7b56dd")
+    assert(out.head.name == "Melon")
+    assert(out.head.code == 15)
+    assert(out.head.baz == 2.55551)
   }
 
 }
