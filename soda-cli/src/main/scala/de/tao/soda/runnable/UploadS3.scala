@@ -29,5 +29,6 @@ object UploadS3 extends App with LazyLogging {
   logger.info("[UploadS3] app starting")
   logger.info("\n" + workflow.printTree())
   workflow.run()
+  workflow.shutdownHook()
   logger.info("[UploadS3] app ending")
 }

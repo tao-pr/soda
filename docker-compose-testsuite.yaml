@@ -1,5 +1,6 @@
 version: '3.8'
 services:
+
   mysql:
     image: mysql:latest
     container_name: mysql-soda-test
@@ -11,3 +12,9 @@ services:
       MYSQL_DATABASE: test
       MYSQL_USER: test
       MYSQL_PASSWORD: testpwd
+
+  redis:
+    image: 'redis:4-alpine'
+    command: redis-server --requirepass testpwd
+    ports:
+      - '6379:6379'

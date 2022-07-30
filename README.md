@@ -16,7 +16,7 @@ Soda is a data API for building typesafe & composable processing pipeline. Soda 
 
 ### soda-etl
 
-Main library and unit test project. Most tests run without external dependencies except following:
+Main data workflow library. Most tests run without external dependencies except following:
 
 #### DB unit tests
 

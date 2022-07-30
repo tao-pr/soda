@@ -25,4 +25,5 @@ object DownloadS3 extends App with LazyLogging {
 
   val fmt = DateTimeFormatter.ofPattern("yyyyMMdd")
   workflow.run(TimestampPath("soda-test", fmt, ".csv").toString)
+  workflow.shutdownHook()
 }

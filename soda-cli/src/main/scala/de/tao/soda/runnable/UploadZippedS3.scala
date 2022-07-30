@@ -35,5 +35,6 @@ object UploadZippedS3 extends App with LazyLogging {
   logger.info("[UploadZippedS3] app starting")
   logger.info("\n" + workflow.printTree())
   workflow.run()
+  workflow.shutdownHook()
   logger.info("[UploadZippedS3] app ending")
 }

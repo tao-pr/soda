@@ -44,7 +44,8 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       scalaTestLactic,
       dirWatcher,
       snappy,
-      mysql
+      mysql,
+      redis
     )
   )
 
