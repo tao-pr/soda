@@ -2,10 +2,8 @@ package de.tao.soda.etl.data.db
 
 import com.redis.RedisClient
 import com.redis.serialization.Parse
-import de.tao.soda.etl.data.{DB, ReadFromDB, ReadIteratorFromDB, WriteToDB}
 import de.tao.soda.etl.data.DB.RedisConfig
-
-import scala.collection.mutable.ArrayBuffer
+import de.tao.soda.etl.data.{DB, ReadFromDB, WriteToDB}
 
 trait Redis {
   var conn: Option[RedisClient] = None

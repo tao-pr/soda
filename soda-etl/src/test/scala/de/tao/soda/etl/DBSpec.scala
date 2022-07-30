@@ -52,4 +52,8 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     assert(out.size == records.size)
   }
 
+  it should "read from redis" in {
+    ???
+  }
+
 }

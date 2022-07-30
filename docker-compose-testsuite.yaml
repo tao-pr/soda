@@ -15,6 +15,7 @@ services:
 
   redis:
     image: 'redis:4-alpine'
+    container_name: redis-soda-test
     command: redis-server --requirepass testpwd
     ports:
       - '6379:6379'
