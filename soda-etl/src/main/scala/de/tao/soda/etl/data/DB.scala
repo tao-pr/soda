@@ -19,6 +19,11 @@ object DB {
     override def getPwd: Option[String] = Some(pwd)
   }
 
+  case class ParamPwdSecret(pwd: String) extends Secret {
+    override def getUser: Option[String] = None
+    override def getPwd: Option[String] = Some(pwd)
+  }
+
   case class DotFileSecret(key: String) extends Secret {
     override def getUser: Option[String] = ??? // todo:
     override def getPwd: Option[String] = ???

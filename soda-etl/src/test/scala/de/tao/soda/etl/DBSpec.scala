@@ -1,8 +1,9 @@
 package de.tao.soda.etl
 
-import de.tao.soda.etl.Domain.MySqlFoo
+import com.redis.serialization.Parse
+import de.tao.soda.etl.Domain.{MySqlFoo, RedisFoo}
 import de.tao.soda.etl.data.DB
-import de.tao.soda.etl.data.db.{ReadFromMySql, WriteToMySql}
+import de.tao.soda.etl.data.db.{ReadFromMySql, ReadFromRedis, WriteToMySql, WriteToRedis}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -18,6 +19,9 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   lazy val mysqlConfig = DB.MySqlConfig("localhost", 3306, "test", "foo")
   lazy val mysqlSecret = DB.ParamSecret("test", "testpwd")
+
+  lazy val redisConfig = DB.RedisConfig("localhost", 6379, db=0)
+  lazy val redisSecret = DB.ParamPwdSecret("testpwd")
 
   it should "read from mysql" in {
     lazy val query = Map[String, Any]("name" -> "='melon'")
@@ -52,8 +56,34 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     assert(out.size == records.size)
   }
 
-  it should "read from redis" in {
-    ???
+  it should "write and read from redis" in {
+    lazy val redisWrite = new WriteToRedis[RedisFoo](redisConfig, redisSecret)
+    val records = List(
+      // key -> field -> value
+      ("key1", "field1", RedisFoo(java.util.UUID.randomUUID().toString, "name1", 100, Array.empty)),
+      ("key1", "field2", RedisFoo(java.util.UUID.randomUUID().toString, "name2", 200, Array(1,2,3))),
+      ("key2", "field1", RedisFoo(java.util.UUID.randomUUID().toString, "name3", 200, Array(1,2,3))),
+      ("key2", "field2", RedisFoo(java.util.UUID.randomUUID().toString, "name2", 300, Array(1,2,3,4,5))),
+      ("key2", "field3", RedisFoo(java.util.UUID.randomUUID().toString, "name3", 200, Array(1)))
+    )
+
+    val ns = redisWrite.run(records)
+
+    Thread.sleep(200)
+
+    // parse as json string
+    implicit val parser = new Parse[RedisFoo](f = RedisFoo.fromBytes)
+
+    // test query back
+    lazy val redisRead = new ReadFromRedis[RedisFoo](redisConfig, redisSecret)
+    val queryMap = Map("key1" -> List("field1","field2"), "key2" -> List("field1", "field2", "field3"))
+    val out = redisRead.run(queryMap).toList
+
+    assert(out.size == records.size)
+
+    val outStr = out.map{ case (k,v,f) => s"$k, $v, $f"}
+    val expStr = records.map{ case (k,v,f) => s"$k, $v, $f"}
+    assert(expStr.forall(outStr.contains(_)))
   }
 
 }

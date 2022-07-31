@@ -33,6 +33,10 @@ If you want to inspect initial data inside instances, just simply use your CLI o
 ```shell
 mysql -h localhost --protocol=TCP -uroot -p
 # enter the root password as described in docker-compose file
+
+
+docker exec -it redis-soda-test redis-cli
+# then AUTH with password as described in docker-compose file
 ```
 
 After tests, you can tear down all dependencies by 
