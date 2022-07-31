@@ -90,4 +90,15 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     assert(expStr.forall(outStr.contains(_)))
   }
 
+  it should "handle non-existing key or field in redis when reading" in {
+    // parse as json string
+    implicit val parser = new Parse[RedisFoo](f = RedisFoo.fromBytes)
+
+    lazy val redisRead = new ReadFromRedis[RedisFoo](redisConfig, redisSecret)
+    val queryMap = Map("key1" -> List("field1","field2"), "key2" -> List("field1", "field2", "field3", "notexist", "key3" -> List("notexist")))
+    val out = redisRead.run(queryMap).toList
+
+    assert(out.size == 5)
+  }
+
 }
