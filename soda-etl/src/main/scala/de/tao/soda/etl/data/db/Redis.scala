@@ -2,6 +2,7 @@ package de.tao.soda.etl.data.db
 
 import com.redis.RedisClient
 import com.redis.serialization.Parse
+import de.tao.soda.etl.Workflow
 import de.tao.soda.etl.data.DB.RedisConfig
 import de.tao.soda.etl.data.{DB, ReadFromDB, WriteToDB}
 
@@ -34,6 +35,21 @@ override val secret: DB.Secret)
         cc.hmget[String, T](k, fields:_*).getOrElse(Map.empty).map{ case (f, _v) => (k, f, _v)}
       }
     }.getOrElse(List.empty)
+  }
+
+  override def shutdownHook(): Unit = {
+    logger.info(s"ReadFromRedis: tearing down connection")
+    conn.map(_.close())
+  }
+}
+
+class FlushRedis[T](config: RedisConfig, secret: DB.Secret) extends Workflow[T,T] with Redis {
+  override def run(input: T): T = {
+    logger.info("FlushRedis : flushing db $config")
+    for (cc <- conn){
+      cc.flushdb
+    }
+    input
   }
 
   override def shutdownHook(): Unit = {

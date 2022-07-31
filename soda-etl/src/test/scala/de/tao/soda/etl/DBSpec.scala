@@ -3,7 +3,7 @@ package de.tao.soda.etl
 import com.redis.serialization.Parse
 import de.tao.soda.etl.Domain.{MySqlFoo, RedisFoo}
 import de.tao.soda.etl.data.DB
-import de.tao.soda.etl.data.db.{ReadFromMySql, ReadFromRedis, WriteToMySql, WriteToRedis}
+import de.tao.soda.etl.data.db.{FlushRedis, ReadFromMySql, ReadFromRedis, WriteToMySql, WriteToRedis}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -57,6 +57,10 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
   }
 
   it should "write and read from redis" in {
+
+    // flush redis before writing
+    new FlushRedis[Nil.type](redisConfig, redisSecret).run(Nil)
+
     lazy val redisWrite = new WriteToRedis[RedisFoo](redisConfig, redisSecret)
     val records = List(
       // key -> field -> value
@@ -67,7 +71,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
       ("key2", "field3", RedisFoo(java.util.UUID.randomUUID().toString, "name3", 200, Array(1)))
     )
 
-    val ns = redisWrite.run(records)
+    redisWrite.run(records)
 
     Thread.sleep(200)
 
