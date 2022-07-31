@@ -61,7 +61,8 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     // flush redis before writing
     new FlushRedis[Nil.type](redisConfig, redisSecret).run(Nil)
 
-    lazy val redisWrite = new WriteToRedis[RedisFoo](redisConfig, redisSecret)
+    val expireF = (key: String) => if (key=="key1") Some(2) else None
+    lazy val redisWrite = new WriteToRedis[RedisFoo](redisConfig, redisSecret, expireF)
     val records = List(
       // key -> field -> value
       ("key1", "field1", RedisFoo(java.util.UUID.randomUUID().toString, "name1", 100, Array.empty)),
@@ -88,6 +89,10 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     val outStr = out.map{ case (k,v,f) => s"$k, $v, $f"}
     val expStr = records.map{ case (k,v,f) => s"$k, $v, $f"}
     assert(expStr.forall(outStr.contains(_)))
+
+    // test expire
+    Thread.sleep(2500)
+    assert(redisRead.run(queryMap).toList.count(_._1 == "key1")==0)
   }
 
   it should "handle non-existing key or field in redis when reading" in {
@@ -98,7 +103,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     val queryMap = Map("key1" -> List("field1","field2"), "key2" -> List("field1", "field2", "field3", "notexist", "key3" -> List("notexist")))
     val out = redisRead.run(queryMap).toList
 
-    assert(out.size == 5)
+    assert(out.size == 3) // NOTE: key1 already expired earlier
   }
 
 }

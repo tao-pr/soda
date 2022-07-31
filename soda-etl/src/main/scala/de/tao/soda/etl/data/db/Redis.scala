@@ -60,7 +60,8 @@ class FlushRedis[T](config: RedisConfig, secret: DB.Secret) extends Workflow[T,T
 
 class WriteToRedis[T <: AnyRef](
 override val config: RedisConfig,
-override val secret: DB.Secret) extends WriteToDB[(String, String, T)] with Redis {
+override val secret: DB.Secret,
+expireF: (String => Option[Int]) = (_ => None)) extends WriteToDB[(String, String, T)] with Redis {
 
   // [[data]] has to be a tuple of (key -> field -> value)
   override def write(data: Iterable[(String, String, T)]): Iterable[(String, String, T)] = {
@@ -69,6 +70,7 @@ override val secret: DB.Secret) extends WriteToDB[(String, String, T)] with Redi
     for { cc <- conn } yield {
       data.groupBy(_._1).foreach{ case (k, iter) =>
         cc.hmset(k, iter.map{ case(_,f,v) => (f,v)}.toMap)
+        expireF(k).foreach{ cc.expire(k,_) }
       }
     }
     data
