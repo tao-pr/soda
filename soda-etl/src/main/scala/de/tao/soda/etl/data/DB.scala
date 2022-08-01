@@ -52,7 +52,7 @@ object DB {
   case class PostgreSqlConfig(host: String, port: Int, db: String, table: String) extends JdbcConnectionConfig {
     override def url = s"jdbc:postgresql://${host}:${port}/${db}"
     override val className: String =  "org.postgresql.Driver"
-    override val quote: String = ""
+    override val quote: String = "\""
   }
 
   class SqliteConfig extends ConnectionConfig
