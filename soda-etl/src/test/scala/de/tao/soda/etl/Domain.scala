@@ -1,11 +1,9 @@
 package de.tao.soda.etl
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.json.JsonMapper
-import com.fasterxml.jackson.module.scala.{ClassTagExtensions, DefaultScalaModule, ScalaObjectMapper}
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.ByteArrayOutputStream
 
 object Domain {
   // For FileSpec, SerializerSpec, WorkflowSpec, WorkSequenceSpec
@@ -37,4 +35,6 @@ object Domain {
       mapper.readValue(str, classOf[RedisFoo])
     }
   }
+
+  case class H2Foo(uuid: String, i: Int, d: Double)
 }

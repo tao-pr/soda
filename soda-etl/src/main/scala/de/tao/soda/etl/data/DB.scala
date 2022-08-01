@@ -30,9 +30,24 @@ object DB {
   }
 
   abstract class ConnectionConfig
-  case class MySqlConfig(host: String, port: Int, db: String, table: String) extends ConnectionConfig
+  abstract class JdbcConnectionConfig extends ConnectionConfig {
+    def url: String
+    val className: String // JDBC classname
+    val table: String
+  }
+
+  case class MySqlConfig(host: String, port: Int, db: String, table: String) extends JdbcConnectionConfig {
+    override def url = s"jdbc:mysql://${host}:${port}/${db}"
+    override val className: String =  "com.mysql.cj.jdbc.Driver"
+  }
+
   case class RedisConfig(host: String, port: Int, db: Int=0) extends ConnectionConfig
-  class H2Config extends ConnectionConfig
+
+  case class H2Config(path: String, dbname: String, table: String) extends JdbcConnectionConfig {
+    override def url = s"jdbc:h2:${path}/${dbname}"
+    override val className = "org.h2.Driver"
+  }
+
   class SqliteConfig extends ConnectionConfig
 
   def caseClassToMap(instance: AnyRef): Map[String, Any] = {

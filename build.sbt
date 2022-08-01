@@ -45,7 +45,8 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       dirWatcher,
       snappy,
       mysql,
-      redis
+      redis,
+      h2
     )
   )
 

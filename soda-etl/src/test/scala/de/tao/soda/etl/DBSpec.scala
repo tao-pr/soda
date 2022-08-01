@@ -1,9 +1,9 @@
 package de.tao.soda.etl
 
 import com.redis.serialization.Parse
-import de.tao.soda.etl.Domain.{MySqlFoo, RedisFoo}
+import de.tao.soda.etl.Domain.{H2Foo, MySqlFoo, RedisFoo}
 import de.tao.soda.etl.data.DB
-import de.tao.soda.etl.data.db.{FlushRedis, ReadFromMySql, ReadFromRedis, WriteToMySql, WriteToRedis}
+import de.tao.soda.etl.data.db.{FlushRedis, ReadFromH2, ReadFromMySql, ReadFromRedis, WriteToH2, WriteToMySql, WriteToRedis}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -15,6 +15,12 @@ object MySqlUtil {
   }
 }
 
+object H2Util {
+  def parser(rs: ResultSet): H2Foo = {
+    H2Foo(rs.getString("uuid"), rs.getInt("i"), rs.getDouble("d"))
+  }
+}
+
 class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   lazy val mysqlConfig = DB.MySqlConfig("localhost", 3306, "test", "foo")
@@ -22,6 +28,9 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   lazy val redisConfig = DB.RedisConfig("localhost", 6379, db=0)
   lazy val redisSecret = DB.ParamPwdSecret("testpwd")
+
+  lazy val h2Config = DB.H2Config("./", "soda-h2-test", "tb1")
+  lazy val h2Secret = DB.ParamPwdSecret("testpwd")
 
   it should "read from mysql" in {
     lazy val query = Map[String, Any]("name" -> "='melon'")
@@ -104,6 +113,33 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     val out = redisRead.run(queryMap).toList
 
     assert(out.size == 3) // NOTE: key1 already expired earlier
+  }
+
+  it should "write and read from H2" in {
+    val sqlCreateTb =
+      """
+        |DROP TABLE tb1 IF EXISTS;
+        |CREATE TABLE tb1(
+        |UUID VARCHAR(36), i INT, d FLOAT);
+        |""".stripMargin
+    lazy val h2write = new WriteToH2[H2Foo](h2Config, h2Secret, Some(sqlCreateTb))
+    val records = List(
+      H2Foo(java.util.UUID.randomUUID().toString, 1, 1e-3),
+      H2Foo(java.util.UUID.randomUUID().toString, 2, 1e-6),
+      H2Foo(java.util.UUID.randomUUID().toString, 3, 1e-12),
+      H2Foo(java.util.UUID.randomUUID().toString, 4, 1e24)
+    )
+
+    val ns = h2write.run(records)
+
+    assert(ns == records)
+
+    // try reading back
+    lazy val h2Read = new ReadFromH2[H2Foo](h2Config, h2Secret, H2Util.parser)
+    val out = h2Read.run(Map("i" -> ">0"))
+
+    assert(out.size == records.size)
+    assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
   }
 
 }
