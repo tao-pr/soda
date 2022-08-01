@@ -14,8 +14,9 @@ trait Jdbc {
   protected var conn: Option[Connection] = None
 
   protected def makeSelect[T](query: Map[String, Any], config: DB.JdbcConnectionConfig, secret: DB.Secret): (Statement, String) = {
+    val quote = config.quote
     val cond = if (query.isEmpty) ""
-    else " WHERE " + query.map { case (k, v) => s"`$k` $v" }.mkString(" and ")
+    else " WHERE " + query.map { case (k, v) => s"$quote$k$quote $v" }.mkString(" and ")
 
     if (conn.isEmpty)
       conn = Some(connection(config, secret))
@@ -48,11 +49,12 @@ trait Jdbc {
     }
 
     if (data.nonEmpty) {
+      val quote = config.quote
       val num = data.map{ rec =>
         val fieldMap = DB.caseClassToMap(rec)
         // todo: use statement value instead
         val valueMap = fieldMap.map { case (_, v) => if (v.isInstanceOf[String]) s"'$v'" else v.toString }
-        val sql = s"INSERT INTO `${config.table}` (${fieldMap.keys.map(k => s"`${k}`").mkString(",")}) VALUES (${valueMap.mkString(",")})"
+        val sql = s"INSERT INTO $quote${config.table}$quote (${fieldMap.keys.map(k => s"$quote${k}$quote").mkString(",")}) VALUES (${valueMap.mkString(",")})"
         smt.executeUpdate(sql)
       }.sum
 

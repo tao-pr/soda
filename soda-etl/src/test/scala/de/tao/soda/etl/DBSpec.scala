@@ -1,9 +1,10 @@
 package de.tao.soda.etl
 
 import com.redis.serialization.Parse
-import de.tao.soda.etl.Domain.{H2Foo, MySqlFoo, RedisFoo}
+import de.tao.soda.etl.Domain.{H2Foo, MySqlFoo, PostgresFoo, RedisFoo}
 import de.tao.soda.etl.data.DB
-import de.tao.soda.etl.data.db.{FlushRedis, ReadFromH2, ReadFromMySql, ReadFromRedis, WriteToH2, WriteToMySql, WriteToRedis}
+import de.tao.soda.etl.data.DB.PostgreSqlConfig
+import de.tao.soda.etl.data.db.{FlushRedis, ReadFromH2, ReadFromMySql, ReadFromPosgreSql, ReadFromRedis, WriteToH2, WriteToMySql, WriteToPosgreSql, WriteToRedis}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -21,6 +22,13 @@ object H2Util {
   }
 }
 
+object PostgresUtil {
+  def parser(rs: ResultSet): PostgresFoo = {
+    PostgresFoo(rs.getString("uuid"), rs.getString("s"), rs.getDouble("d"))
+  }
+}
+
+
 class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   lazy val mysqlConfig = DB.MySqlConfig("localhost", 3306, "test", "foo")
@@ -31,6 +39,9 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   lazy val h2Config = DB.H2Config("./", "soda-h2-test", "tb1")
   lazy val h2Secret = DB.ParamPwdSecret("testpwd")
+
+  lazy val postgresConfig = DB.PostgreSqlConfig("localhost", 5432, "test", "tbtest")
+  lazy val postgresSecret = DB.ParamSecret("thetest", "testpwd")
 
   it should "read from mysql" in {
     lazy val query = Map[String, Any]("name" -> "='melon'")
@@ -137,6 +148,32 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     // try reading back
     lazy val h2Read = new ReadFromH2[H2Foo](h2Config, h2Secret, H2Util.parser)
     val out = h2Read.run(Map("i" -> ">0"))
+
+    assert(out.size == records.size)
+    assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
+  }
+
+  it should "write and read from postgres" in {
+    val sqlCreateTb =
+      """
+        |DROP TABLE IF EXISTS tbtest;
+        |CREATE TABLE tbtest(
+        |UUID VARCHAR(36), s VARCHAR(1), d FLOAT);
+        |""".stripMargin
+    lazy val postwrite = new WriteToPosgreSql[PostgresFoo](postgresConfig, postgresSecret, Some(sqlCreateTb))
+    val records = List(
+      PostgresFoo(java.util.UUID.randomUUID().toString, "1", 1e-3),
+      PostgresFoo(java.util.UUID.randomUUID().toString, "2", 1e-6),
+      PostgresFoo(java.util.UUID.randomUUID().toString, "3", 1e-12)
+    )
+
+    val ns = postwrite.run(records)
+
+    assert(ns == records)
+
+    // try reading back
+    lazy val postRead = new ReadFromPosgreSql[PostgresFoo](postgresConfig, postgresSecret, PostgresUtil.parser)
+    val out = postRead.run(Map("d" -> ">0"))
 
     assert(out.size == records.size)
     assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)

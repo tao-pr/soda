@@ -34,6 +34,7 @@ object DB {
     def url: String
     val className: String // JDBC classname
     val table: String
+    val quote: String = "`"
   }
 
   case class MySqlConfig(host: String, port: Int, db: String, table: String) extends JdbcConnectionConfig {
@@ -46,6 +47,12 @@ object DB {
   case class H2Config(path: String, dbname: String, table: String) extends JdbcConnectionConfig {
     override def url = s"jdbc:h2:${path}/${dbname}"
     override val className = "org.h2.Driver"
+  }
+
+  case class PostgreSqlConfig(host: String, port: Int, db: String, table: String) extends JdbcConnectionConfig {
+    override def url = s"jdbc:postgresql://${host}:${port}/${db}"
+    override val className: String =  "org.postgresql.Driver"
+    override val quote: String = ""
   }
 
   class SqliteConfig extends ConnectionConfig

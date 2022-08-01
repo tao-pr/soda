@@ -19,3 +19,13 @@ services:
     command: redis-server --requirepass testpwd
     ports:
       - '6379:6379'
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres-soda-test
+    environment:
+      POSTGRES_USER: thetest
+      POSTGRES_PASSWORD: testpwd
+      POSTGRES_DB: test
+    ports:
+      - 5432:5432

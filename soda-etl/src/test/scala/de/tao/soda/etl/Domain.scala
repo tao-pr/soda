@@ -37,4 +37,5 @@ object Domain {
   }
 
   case class H2Foo(uuid: String, i: Int, d: Double)
+  case class PostgresFoo(uuid: String, s: String, d: Double)
 }
