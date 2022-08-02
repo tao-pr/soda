@@ -3,8 +3,7 @@ package de.tao.soda.etl
 import com.redis.serialization.Parse
 import de.tao.soda.etl.Domain.{H2Foo, MySqlFoo, PostgresFoo, RedisFoo}
 import de.tao.soda.etl.data.DB
-import de.tao.soda.etl.data.DB.PostgreSqlConfig
-import de.tao.soda.etl.data.db.{FlushRedis, ReadFromH2, ReadFromMySql, ReadFromPosgreSql, ReadFromRedis, WriteToH2, WriteToMySql, WriteToPosgreSql, WriteToRedis}
+import de.tao.soda.etl.data.db._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -74,6 +73,18 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     val out = mysqlRead.run(Map[String, Any]("name" -> "LIKE 'name-%'"))
 
     assert(out.size == records.size)
+  }
+
+  it should "read an iterator from mysql" in {
+    lazy val mysqlRead = new ReadIteratorFromMySql[MySqlFoo](mysqlConfig, mysqlSecret, MySqlUtil.parser)
+    val iter = mysqlRead.run(Map[String, Any]("name" -> "LIKE 'name-%'"))
+
+    assert(iter.isInstanceOf[Iterator[_]])
+    var nameSet = (1 to 5).map(s => s"name-$s").toSet
+    for (n <- iter){
+      assert(nameSet.contains(n.name))
+      nameSet = nameSet.excl(n.name)
+    }
   }
 
   it should "write and read from redis" in {
@@ -151,6 +162,18 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     assert(out.size == records.size)
     assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
+  }
+
+  it should "read an iterator from h2" in {
+    lazy val h2Read = new ReadIteratorFromH2[H2Foo](h2Config, mysqlSecret, H2Util.parser)
+    val iter = h2Read.run(Map[String, Any]("i" -> ">0"))
+
+    assert(iter.isInstanceOf[Iterator[_]])
+    var idSet = (1 to 5).toSet
+    for (n <- iter){
+      assert(idSet.contains(n.i))
+      idSet = idSet.excl(n.i)
+    }
   }
 
   it should "write and read from postgres" in {

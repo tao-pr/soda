@@ -13,14 +13,17 @@ trait Jdbc {
 
   protected var conn: Option[Connection] = None
 
-  protected def makeSelect[T](query: Map[String, Any], config: DB.JdbcConnectionConfig, secret: DB.Secret): (Statement, String) = {
+  protected def makeSelect[T](query: Map[String, Any], config: DB.JdbcConnectionConfig, secret: DB.Secret, forIter: Boolean=false): (Statement, String) = {
     val quote = config.quote
     val cond = if (query.isEmpty) ""
     else " WHERE " + query.map { case (k, v) => s"$quote$k$quote $v" }.mkString(" and ")
 
     if (conn.isEmpty)
       conn = Some(connection(config, secret))
-    val smt = conn.get.createStatement()
+    val smt = if (forIter)
+      conn.get.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY)
+    else
+      conn.get.createStatement()
     (smt, s"SELECT * FROM ${config.table} ${cond}")
   }
 
@@ -35,7 +38,7 @@ trait Jdbc {
   }
 
   protected def readTableAsIterator[T](query: Map[String, Any], config: DB.JdbcConnectionConfig, secret: DB.Secret, parser: (ResultSet => T)): Iterator[T] = {
-    val (smt, sql) = makeSelect[T](query, config, secret)
+    val (smt, sql) = makeSelect[T](query, config, secret, forIter=true)
     val rs = smt.executeQuery(sql)
     new JdbcRecordIterator[T](rs, parser)
   }
