@@ -2,13 +2,15 @@ package de.tao.soda.etl.data
 
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.model.{AmazonS3Exception, ObjectMetadata, S3Object, S3ObjectSummary}
+import com.amazonaws.services.s3.model.{AccessControlList, AmazonS3Exception, CanonicalGrantee, Grantee, ObjectLockRetention, ObjectLockRetentionMode, ObjectMetadata, Owner, Permission, S3Object, S3ObjectSummary, SetBucketAclRequest, SetObjectRetentionRequest}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import com.typesafe.scalalogging.Logger
 import de.tao.soda.etl._
 import de.tao.soda.etl.data.OutputIdentifier.$
 
 import java.io.{ByteArrayInputStream, File, InputStream, ObjectInputStream}
 import java.util
+import java.util.Date
 import java.util.zip.GZIPInputStream
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
@@ -22,6 +24,37 @@ trait S3Default {
     .build()
 
   def bucketExists(bucket: String): Boolean = s3.doesBucketExistV2(bucket)
+
+  def createBucket(bucket: String, aclMaybe: Option[Map[String, Permission]], logger: Logger): Unit = {
+    s3.createBucket(bucket)
+
+    val aclStr = aclMaybe.map{ aclMap =>
+      aclMap.map{ case (id, role) => s"($id -> $role)" }.mkString(", ")
+    }.getOrElse("")
+
+    aclMaybe.foreach{ aclMap =>
+      logger.info(s"${this.getClass.getName} trying to set ACL to bucket  s3://${bucket} with: $aclStr")
+      val acl = new AccessControlList()
+      aclMap.foreach{ case (id, role) =>
+        val grantee = new CanonicalGrantee(id)
+        acl.grantPermission(grantee, role)
+      }
+      val bucketAcl = new SetBucketAclRequest(bucket, acl)
+      s3.setBucketAcl(bucketAcl)
+    }
+  }
+
+  def createACLreport(bucket: String, objname: String): (String, String) = {
+    val acl = s3.getObjectAcl(bucket, objname)
+    var aclReport = ""
+    val grants = acl.getGrantsAsList
+    for (i <- 0 until grants.size()) {
+      val g = grants.get(i)
+      aclReport += g.getGrantee.getIdentifier + " => " + g.getPermission.getHeaderName
+      if (i < grants.size-1) aclReport += ", "
+    }
+    (aclReport, acl.getOwner.getId)
+  }
 }
 
 
@@ -132,8 +165,12 @@ class ReadS3Bucket[T <:Product with Serializable](
 }
 
 class WriteS3Object[T <: Product with Serializable](
-  bucket: String,  key: OutputIdentifier, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
-  (implicit val classTag: ClassTag[T]) extends DataWriter[T] with S3Default {
+  bucket: String,
+  key: OutputIdentifier,
+  override val region: Regions = Regions.DEFAULT_REGION,
+  overwrite: Boolean = true,
+  aclMaybe: Option[Map[String, Permission]] = None)
+(implicit val classTag: ClassTag[T]) extends DataWriter[T] with S3Default {
 
   import OutputIdentifier._
 
@@ -144,7 +181,7 @@ class WriteS3Object[T <: Product with Serializable](
 
     if (!s3.doesBucketExistV2(bucket)){
       logger.info(s"WriteS3Object trying to create bucket s3://${bucket}")
-      s3.createBucket(bucket)
+      createBucket(bucket, aclMaybe, logger)
     }
 
     if (s3.doesObjectExist(bucket, objname) && !overwrite){
@@ -160,14 +197,23 @@ class WriteS3Object[T <: Product with Serializable](
     s3.putObject(bucket, objname, tempFile)
 
     tempFile.delete()
+
+    // check object acl and report
+    val aclReport, ownerId = createACLreport(bucket, objname)
+    logger.info(s"UploadToS3 : uploaded ${fullURI} with owner=${ownerId}, ACL=[$aclReport]")
+
     PathIdentifier(fullURI)
   }
 }
 
 // todo: DRY
 class WriteS3ZippedObject[T <: Product with Serializable](
-  bucket: String,  key: OutputIdentifier, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
-  (implicit val classTag: ClassTag[T]) extends DataWriter[T] with S3Default {
+  bucket: String,
+  key: OutputIdentifier,
+  override val region: Regions = Regions.DEFAULT_REGION,
+  overwrite: Boolean = true,
+  aclMaybe: Option[Map[String, Permission]] = None) // Map [canonical id -> Permission])
+(implicit val classTag: ClassTag[T]) extends DataWriter[T] with S3Default {
 
   import OutputIdentifier._
 
@@ -178,7 +224,7 @@ class WriteS3ZippedObject[T <: Product with Serializable](
 
     if (!s3.doesBucketExistV2(bucket)){
       logger.info(s"WriteS3ZippedObject trying to create bucket s3://${bucket}")
-      s3.createBucket(bucket)
+      createBucket(bucket, aclMaybe, logger)
     }
 
     if (s3.doesObjectExist(bucket, objname) && !overwrite){
@@ -194,21 +240,31 @@ class WriteS3ZippedObject[T <: Product with Serializable](
     s3.putObject(bucket, objname, tempFile)
 
     tempFile.delete()
+
+    // check object acl and report
+    val aclReport, ownerId = createACLreport(bucket, objname)
+    logger.info(s"UploadToS3 : uploaded ${fullURI} with owner=${ownerId}, ACL=[$aclReport]")
+
     PathIdentifier(objname)
   }
 }
 
-class UploadToS3(bucket: String, key: OutputIdentifier, override val region: Regions = Regions.DEFAULT_REGION, overwrite: Boolean = true)
+class UploadToS3(
+  bucket: String,
+  key: OutputIdentifier,
+  override val region: Regions = Regions.DEFAULT_REGION,
+  overwrite: Boolean = true,
+  aclMaybe: Option[Map[String, Permission]] = None) // Map [canonical id -> Permission]
 extends DataWriter[InputIdentifier] with S3Default {
 
-  override def run(input: InputIdentifier) = {
+  override def run(input: InputIdentifier): PathIdentifier = {
     val objname = key.toString
     val fullURI = s"s3://$bucket/$objname"
     logger.info(s"UploadToS3 uploading $input to $fullURI (region=${s3.getRegionName})")
 
     if (!s3.doesBucketExistV2(bucket)){
       logger.info(s"UploadToS3 trying to create bucket s3://${bucket}")
-      s3.createBucket(bucket)
+      createBucket(bucket, aclMaybe, logger)
     }
 
     if (s3.doesObjectExist(bucket, objname) && !overwrite){
@@ -231,8 +287,12 @@ extends DataWriter[InputIdentifier] with S3Default {
         logger.info(s"UploadToS3 uploading ${bytes.length} bytes")
         s3.putObject(bucket, objname, bstream, new ObjectMetadata())
     }
+
+    // check object acl and report
+    val aclReport, ownerId = createACLreport(bucket, objname)
+    logger.info(s"UploadToS3 : uploaded ${fullURI} with owner=${ownerId}, ACL=[$aclReport]")
+
     PathIdentifier(objname)
   }
 }
 
-// todo: ACL for created bucket & object

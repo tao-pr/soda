@@ -13,6 +13,7 @@ trait Jdbc {
 
   protected var conn: Option[Connection] = None
 
+  // todo: use param of statement instead https://stackoverflow.com/questions/12745186/passing-parameters-to-a-jdbc-preparedstatement
   protected def makeSelect[T](query: Map[String, Any], config: DB.JdbcConnectionConfig, secret: DB.Secret, forIter: Boolean=false): (Statement, String) = {
     val quote = config.quote
     val cond = if (query.isEmpty) ""
