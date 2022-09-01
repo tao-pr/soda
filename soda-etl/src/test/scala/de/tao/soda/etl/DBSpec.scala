@@ -37,7 +37,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
   lazy val redisSecret = DB.ParamPwdSecret("testpwd")
 
   lazy val h2Config = DB.H2Config("./", "soda-h2-test", "tb1")
-  lazy val h2Secret = DB.ParamPwdSecret("testpwd")
+  lazy val h2Secret = DB.ParamSecret("jdoe", "testpwd2")
 
   lazy val postgresConfig = DB.PostgreSqlConfig("localhost", 5432, "test", "tbtest")
   lazy val postgresSecret = DB.ParamSecret("thetest", "testpwd")
@@ -165,7 +165,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
   }
 
   it should "read an iterator from h2" in {
-    lazy val h2Read = new ReadIteratorFromH2[H2Foo](h2Config, mysqlSecret, H2Util.parser)
+    lazy val h2Read = new ReadIteratorFromH2[H2Foo](h2Config, h2Secret, H2Util.parser)
     val iter = h2Read.run(Map[String, Any]("i" -> ">0"))
 
     assert(iter.isInstanceOf[Iterator[_]])

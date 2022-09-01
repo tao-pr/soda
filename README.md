@@ -57,4 +57,4 @@ TBD
 
 ## Licence
 
-TBD
+MIT
