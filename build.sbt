@@ -47,7 +47,8 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       mysql,
       redis,
       h2,
-      postgres
+      postgres,
+      mongo
     )
   )
 
