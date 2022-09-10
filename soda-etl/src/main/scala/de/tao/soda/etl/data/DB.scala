@@ -79,25 +79,24 @@ object DB {
 }
 
 trait ReadFromDB[T] extends DataQuery[Iterable[T]]{
-  def read(query: Map[String, Any]): Iterable[T]
+  def read(query: Filter): Iterable[T]
 
   val config: DB.ConnectionConfig
   val secret: DB.Secret
 
-  override def run(input: Map[String, Any]): Iterable[T] = {
+  override def run(input: Filter): Iterable[T] = {
     logger.info(s"${this.getClass.getName} reading from storage: $config")
     read(input)
- 
   }
 }
 
 trait ReadIteratorFromDB[T] extends DataQuery[Iterator[T]]{
-  def read(query: Map[String, Any]): Iterator[T]
+  def read(query: Filter): Iterator[T]
 
   val config: DB.ConnectionConfig
   val secret: DB.Secret
 
-  override def run(input: Map[String, Any]): Iterator[T] = {
+  override def run(input: Filter): Iterator[T] = {
     logger.info(s"${this.getClass.getName} reading iterator from storage: $config")
     read(input)
   }
@@ -119,6 +118,11 @@ trait WriteToDB[T] extends Workflow[Iterable[T], Iterable[T]]{
 trait Filter { 
   def toSql: String 
   def clean(quote: Char): Filter
+}
+
+case object NFilter extends Filter {
+  override def toSql: String = ""
+  override def clean(quote: Char): Filter = NFilter
 }
 
 case class AndFilter(cond: Filter*) extends Filter { 
