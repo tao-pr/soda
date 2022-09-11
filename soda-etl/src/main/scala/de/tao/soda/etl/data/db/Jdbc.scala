@@ -19,7 +19,7 @@ trait Jdbc {
     val quote = config.quote
     val cond = query match {
       case NFilter => ""
-      case _ => "WHERE ${query.toSql}"
+      case filter => s"WHERE ${query.clean(config.quote).toSql}"
     }
 
     if (conn.isEmpty)
@@ -61,7 +61,12 @@ trait Jdbc {
         val fieldMap = DB.caseClassToMap(rec)
         // todo: use statement value instead
         val valueMap = fieldMap.map { case (_, v) => if (v.isInstanceOf[String]) s"'$v'" else v.toString }
-        val sql = s"INSERT INTO $quote${config.table}$quote (${fieldMap.keys.map(k => s"$quote${k}$quote").mkString(",")}) VALUES (${valueMap.mkString(",")})"
+        val sql = s"""
+          INSERT INTO $quote${config.table}$quote 
+          (${fieldMap.keys.map(k => s"$quote${k}$quote").mkString(",")}) 
+          VALUES (${valueMap.mkString(",")})
+        """.stripMargin
+
         smt.executeUpdate(sql)
       }.sum
 

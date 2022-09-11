@@ -4,6 +4,7 @@ import com.redis.serialization.Parse
 import de.tao.soda.etl.Domain.{H2Foo, MySqlFoo, PostgresFoo, RedisFoo}
 import de.tao.soda.etl.data.DB
 import de.tao.soda.etl.data.db._
+import de.tao.soda.etl.data._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -43,7 +44,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
   lazy val postgresSecret = DB.ParamSecret("thetest", "testpwd")
 
   it should "read from mysql" in {
-    lazy val query = Map[String, Any]("name" -> "='melon'")
+    lazy val query = Eq("name", "melon")
     lazy val mysqlRead = new ReadFromMySql[MySqlFoo](mysqlConfig, mysqlSecret, MySqlUtil.parser)
 
     val out = mysqlRead.run(query)
@@ -70,14 +71,14 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     // test query back
     lazy val mysqlRead = new ReadFromMySql[MySqlFoo](mysqlConfig, mysqlSecret, MySqlUtil.parser)
-    val out = mysqlRead.run(Map[String, Any]("name" -> "LIKE 'name-%'"))
+    val out = mysqlRead.run(Like("name", "name-%"))
 
     assert(out.size == records.size)
   }
 
   it should "read an iterator from mysql" in {
     lazy val mysqlRead = new ReadIteratorFromMySql[MySqlFoo](mysqlConfig, mysqlSecret, MySqlUtil.parser)
-    val iter = mysqlRead.run(Map[String, Any]("name" -> "LIKE 'name-%'"))
+    val iter = mysqlRead.run(Like("name", "name-%"))
 
     assert(iter.isInstanceOf[Iterator[_]])
     var nameSet = (1 to 5).map(s => s"name-$s").toSet
@@ -112,13 +113,16 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     // test query back
     lazy val redisRead = new ReadFromRedis[RedisFoo](redisConfig, redisSecret)
-    val queryMap = Map("key1" -> List("field1","field2"), "key2" -> List("field1", "field2", "field3"))
+    val queryMap = MultiHMGet(
+      HMGet("key1", "field1", "field2"),
+      HMGet("key2", "field1", "field2", "field3")
+    )
     val out = redisRead.run(queryMap).toList
 
     assert(out.size == records.size)
 
-    val outStr = out.map{ case (k,v,f) => s"$k, $v, $f"}
-    val expStr = records.map{ case (k,v,f) => s"$k, $v, $f"}
+    val outStr = out.map{ case (k,f) => s"$k, $f"}
+    val expStr = records.map{ case (k,f,v) => s"$k, $f"}
     assert(expStr.forall(outStr.contains(_)))
 
     // test expire
@@ -131,7 +135,11 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     implicit val parser = new Parse[RedisFoo](f = RedisFoo.fromBytes)
 
     lazy val redisRead = new ReadFromRedis[RedisFoo](redisConfig, redisSecret)
-    val queryMap = Map("key1" -> List("field1","field2"), "key2" -> List("field1", "field2", "field3", "notexist", "key3" -> List("notexist")))
+    val queryMap = MultiHMGet(
+      HMGet("key1", "field1", "field2"),
+      HMGet("key2", "field1", "field2", "field3", "notexist"),
+      HMGet("key3", "notexist")
+    )
     val out = redisRead.run(queryMap).toList
 
     assert(out.size == 3) // NOTE: key1 already expired earlier
@@ -158,7 +166,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     // try reading back
     lazy val h2Read = new ReadFromH2[H2Foo](h2Config, h2Secret, H2Util.parser)
-    val out = h2Read.run(Map("i" -> ">0"))
+    val out = h2Read.run(Gt("i", 0))
 
     assert(out.size == records.size)
     assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
@@ -166,7 +174,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   it should "read an iterator from h2" in {
     lazy val h2Read = new ReadIteratorFromH2[H2Foo](h2Config, h2Secret, H2Util.parser)
-    val iter = h2Read.run(Map[String, Any]("i" -> ">0"))
+    val iter = h2Read.run(Gt("i", 0))
 
     assert(iter.isInstanceOf[Iterator[_]])
     var idSet = (1 to 5).toSet
@@ -196,7 +204,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     // try reading back
     lazy val postRead = new ReadFromPosgreSql[PostgresFoo](postgresConfig, postgresSecret, PostgresUtil.parser)
-    val out = postRead.run(Map("d" -> ">0"))
+    val out = postRead.run(Gt("d", 0))
 
     assert(out.size == records.size)
     assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)

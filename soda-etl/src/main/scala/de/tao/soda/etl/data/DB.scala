@@ -36,7 +36,7 @@ object DB {
     def url: String
     val className: String // JDBC classname
     val table: String
-    val quote: String = "`"
+    val quote: Char = '`'
   }
 
   case class MySqlConfig(host: String, port: Int, db: String, table: String) extends JdbcConnectionConfig {
@@ -54,7 +54,7 @@ object DB {
   case class PostgreSqlConfig(host: String, port: Int, db: String, table: String) extends JdbcConnectionConfig {
     override def url = s"jdbc:postgresql://${host}:${port}/${db}"
     override val className: String =  "org.postgresql.Driver"
-    override val quote: String = "\""
+    override val quote: Char = '\"'
   }
 
   class SqliteConfig extends ConnectionConfig
@@ -169,9 +169,15 @@ case class Between(field: String, lb: Any, ub: Any) extends Filter {
   override def toSql = s"($field between ${Filter.vts(lb)} and ${Filter.vts(ub)})"
   override def clean(quote: Char): Filter = Between(Filter.quote(Filter.esc(field), quote), lb, ub)
 }
+
 case class IsIn(field: String, values: Set[Any]) extends Filter {
   override def toSql: String = s"$field in (${values.map(Filter.vts).mkString(",")})"
   override def clean(quote: Char): Filter = IsIn(Filter.quote(Filter.esc(field), quote), values)
+}
+
+case class Like(field: String, value: String) extends Filter {
+  override def toSql: String = s"$field like ${Filter.vts(value)}"
+  override def clean(quote: Char): Filter = Like(Filter.quote(Filter.esc(field), quote), value)
 }
 
 object Filter {
