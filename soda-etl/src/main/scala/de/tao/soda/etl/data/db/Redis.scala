@@ -98,6 +98,7 @@ class WriteToRedis[T <: AnyRef](
 override val config: RedisConfig,
 override val secret: DB.Secret,
 expireF: (String => Option[Int]) = (_ => None)) extends WriteToDB[(String, String, T)] with Redis {
+  // taotodo: writeToDB[(Redis.Key, T)] instead ^^
 
   // [[data]] has to be a tuple of (key -> field -> value)
   override def write(data: Iterable[(String, String, T)]): Iterable[(String, String, T)] = {
