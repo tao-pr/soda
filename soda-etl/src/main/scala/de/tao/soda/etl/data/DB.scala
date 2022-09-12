@@ -156,7 +156,7 @@ case class Lte(field: String, value: Any) extends Filter {
 }
 
 case class Eq(field: String, value: Any) extends Filter { 
-  override def toSql = s"$field == ${Filter.vts(value)}"
+  override def toSql = s"$field = ${Filter.vts(value)}"
   override def clean(quote: Char): Filter = Eq(Filter.quote(Filter.esc(field), quote), value)
 }
 

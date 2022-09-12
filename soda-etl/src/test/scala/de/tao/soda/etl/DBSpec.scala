@@ -121,8 +121,14 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     assert(out.size == records.size)
 
-    val outStr = out.map{ case (k,f) => s"$k, $f"}
+    val redisKeyToStr = (k: Redis.Key) => k match {
+      case Left(key) => key
+      case Right((key,field)) => s"$key, $field" // this one should match expectation
+    }
+
+    val outStr = out.map{ case (k,v) => s"${redisKeyToStr(k)}"}
     val expStr = records.map{ case (k,f,v) => s"$k, $f"}
+
     assert(expStr.forall(outStr.contains(_)))
 
     // test expire
@@ -140,9 +146,29 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
       HMGet("key2", "field1", "field2", "field3", "notexist"),
       HMGet("key3", "notexist")
     )
+
+    /**
+     * (Right((key1,field1)),None), 
+      (Right((key1,field2)),None), 
+      (Right((key2,field1)),Some({"uuid":"d8fb31be-4feb-44c2-99ac-b772f183f4df","name":"name3","code":200,"arr":[1,2,3]})), 
+      (Right((key2,field2)),Some({"uuid":"6d85b3fe-f5e4-4157-99f7-c34f33be83e3","name":"name2","code":300,"arr":[1,2,3,4,5]})), 
+      (Right((key2,field3)),Some({"uuid":"4109f549-4cb0-4520-aedc-5c56b1646c7f","name":"name3","code":200,"arr":[1]})), 
+      (Right((key2,notexist)),None), 
+      (Right((key3,notexist)),None))
+    */
+
     val out = redisRead.run(queryMap).toList
 
-    assert(out.size == 3) // NOTE: key1 already expired earlier
+    assert(out.size == 7)
+    assert(out.count{ n => n match {
+      case (Right((k,f)), v) if k=="key1" && v.isEmpty => true
+      case _ => false
+    }} == 2) // all key1 expired earlier
+
+    assert(out.count{ n => n match {
+      case (Right((k,f)), v) if k=="key2" && v.nonEmpty => true
+      case _ => false
+    }} == 3) // all key2 filled with values
   }
 
   it should "write and read from H2" in {
