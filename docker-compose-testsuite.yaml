@@ -38,4 +38,4 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: pwd
       MONGO_INITDB_DATABASE: soda
     ports:
-      - 8081:8081
+      - 27010:27017

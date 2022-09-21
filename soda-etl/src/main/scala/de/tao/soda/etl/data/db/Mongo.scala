@@ -42,13 +42,34 @@ trait MongoBase {
 
 }
 
-class ReadFromMongo[T <: Product with Serializable](
+object Implicits {
+  implicit def mapToDoc(map: Map[String, Any]): Document = {
+    import scala.jdk.CollectionConverters._
+    val doc = new Document()
+    map.foreach{ case (k,v) =>
+      v match {
+        case ls :List[_] => doc.append(k, ls.asJava)
+        case ls :Seq[_] => doc.append(k, ls.asJava)
+        case ls :Set[_] => doc.append(k, ls.asJava)
+        case ls :Array[_] => doc.append(k, ls.toList.asJava)
+        case _ => doc.append(k,v)
+      }
+    }
+    doc
+  }
+
+  implicit def ccToDoc(cc: AnyRef): Document = {
+    mapToDoc(DB.caseClassToMap(cc))
+  }
+}
+
+class ReadFromMongo[T <: AnyRef](
   override val config: DB.MongoConfig,
   override val secret: DB.Secret,
   db: String,
   cl: String,
   limit: Option[Int]=None
-)(implicit ct: ClassTag[T], cv: Document => T) extends ReadFromDB[T] with MongoBase {
+)(implicit cv: Document => T) extends ReadFromDB[T] with MongoBase {
 
   override def read(query: Filter): Iterable[T] = {
     createConn(config, secret)
@@ -75,6 +96,34 @@ class ReadFromMongo[T <: Product with Serializable](
 
   override def shutdownHook(): Unit = {
     logger.info("ReadFromMongo: tearing down connection")
+    conn.map(_.close())
+  }
+}
+
+
+class WriteToMongo[T <: AnyRef](
+override val config: DB.MongoConfig,
+override val secret: DB.Secret,
+db: String,
+cl: String,
+)(implicit cv: T => Document) extends WriteToDB[T] with MongoBase {
+
+  override def write(data: Iterable[T]): Iterable[T] = {
+    logger.info("WriteToMongo: writing ${data.length} records to $config")
+    createConn(config, secret)
+    collection(db, cl) match {
+      case Some(col) =>
+        data.foreach{ rec => col.insertOne(cv(rec)) }
+        data
+
+      case None =>
+        logger.warn("WriteToMongo: cannot connect to $config")
+        Iterable.empty
+    }
+  }
+
+  override def shutdownHook(): Unit = {
+    logger.info("WriteToMongo: tearing down connection")
     conn.map(_.close())
   }
 }

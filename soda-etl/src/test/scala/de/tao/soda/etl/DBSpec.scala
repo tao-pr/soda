@@ -1,7 +1,7 @@
 package de.tao.soda.etl
 
 import com.redis.serialization.Parse
-import de.tao.soda.etl.Domain.{H2Foo, MySqlFoo, PostgresFoo, RedisFoo}
+import de.tao.soda.etl.Domain._
 import de.tao.soda.etl.data.DB
 import de.tao.soda.etl.data.db._
 import de.tao.soda.etl.data._
@@ -9,6 +9,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.sql.ResultSet
+import org.bson.Document
 
 object MySqlUtil {
   def parser(rs: ResultSet): MySqlFoo = {
@@ -42,6 +43,9 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   lazy val postgresConfig = DB.PostgreSqlConfig("localhost", 5432, "test", "tbtest")
   lazy val postgresSecret = DB.ParamSecret("thetest", "testpwd")
+
+  lazy val mongoConfig = DB.MongoClientConfig("mongodb://localhost:27010")
+  lazy val mongoSecret = DB.ParamSecret("root", "pwd")
 
   it should "read from mysql" in {
     lazy val query = Eq("name", "melon")
@@ -234,6 +238,36 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     assert(out.size == records.size)
     assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
+  }
+
+  it should "write and read from mongo" in {
+    import de.tao.soda.etl.data.db.Implicits._
+    import scala.collection.JavaConverters._
+
+    val dbname = "soda"
+    val collection = "col1"
+    val mongoWrite = new WriteToMongo[MongoFoo](mongoConfig, mongoSecret, dbname, collection)
+    lazy val records = List(
+      MongoFoo("name1", 1::2::3::Nil),
+      MongoFoo("name2", Nil),
+      MongoFoo("name3", -1::0::150::22::3::Nil),
+      MongoFoo("box", 100::250::Nil)
+    )
+
+    val outWrite = mongoWrite.run(records)
+    assert(outWrite.size == records.size)
+
+    // read what we wrote back 
+    implicit val converter = (doc: Document) => MongoFooRead(
+      doc.getObjectId().toString(),
+      doc.getString("name"),
+      doc.getList[Int]("arr", classOf[Int]).asScala.toList
+    )
+    lazy val mongoRead = new ReadFromMongo[Domain.MongoFooRead](mongoConfig, mongoSecret, dbname, collection)
+    val outRead = mongoRead.run(Not(Eq("name", "box")))
+
+    assert(outRead.size == records.size-1) // box is excluded
+    assert(outRead.count(_.name.startsWith("name")) == outRead.size)
   }
 
 }

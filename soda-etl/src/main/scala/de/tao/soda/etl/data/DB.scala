@@ -3,6 +3,9 @@ package de.tao.soda.etl.data
 import de.tao.soda.etl.{DataQuery, Workflow}
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
+import com.mongodb.MongoClientSettings
+import com.mongodb.connection.ClusterSettings
+import com.mongodb.ServerAddress
 
 
 object DB {
@@ -64,6 +67,7 @@ object DB {
   }
 
   // uri: mongodb://hostname:port/
+  //      mongodb://hostname1:port/,hostname2:port/
   case class MongoClientConfig(uri: String) extends MongoConfig {
     override def createConn: MongoClient = MongoClients.create(uri)
 
@@ -102,6 +106,9 @@ trait ReadIteratorFromDB[T] extends DataQuery[Iterator[T]]{
   }
 }
 
+/**
+ * WriteToDB intends to "insert only" new data into the storage
+ */
 trait WriteToDB[T] extends Workflow[Iterable[T], Iterable[T]]{
   def write(data: Iterable[T]): Iterable[T]
 
