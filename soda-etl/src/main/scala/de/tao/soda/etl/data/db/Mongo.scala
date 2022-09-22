@@ -19,7 +19,7 @@ trait MongoBase {
 
   def createConn(config: DB.MongoConfig, secret: DB.Secret) = {
     if (conn.isEmpty)
-      conn = Some(config.createConn)
+      conn = Some(config.createConn(secret))
     conn
   }
 
@@ -38,6 +38,7 @@ trait MongoBase {
     case Between(t, v1, v2) => and(gte(t, v1), lte(t, v2))
     case IsIn(t, vs) => in(t, vs)
     case Like(t, v) => eql(t, v)
+    case _ => new Document()
   }
 
 }
@@ -66,14 +67,13 @@ object Implicits {
 class ReadFromMongo[T <: AnyRef](
   override val config: DB.MongoConfig,
   override val secret: DB.Secret,
-  db: String,
   cl: String,
   limit: Option[Int]=None
 )(implicit cv: Document => T) extends ReadFromDB[T] with MongoBase {
 
   override def read(query: Filter): Iterable[T] = {
     createConn(config, secret)
-    collection(db, cl) match {
+    collection(config.dbname, cl) match {
       case None => 
         logger.warn("ReadFromMongo: cannot read from $config")
         Iterable.empty
@@ -104,14 +104,13 @@ class ReadFromMongo[T <: AnyRef](
 class WriteToMongo[T <: AnyRef](
 override val config: DB.MongoConfig,
 override val secret: DB.Secret,
-db: String,
 cl: String,
 )(implicit cv: T => Document) extends WriteToDB[T] with MongoBase {
 
   override def write(data: Iterable[T]): Iterable[T] = {
     logger.info("WriteToMongo: writing ${data.length} records to $config")
     createConn(config, secret)
-    collection(db, cl) match {
+    collection(config.dbname, cl) match {
       case Some(col) =>
         data.foreach{ rec => col.insertOne(cv(rec)) }
         data
@@ -124,6 +123,25 @@ cl: String,
 
   override def shutdownHook(): Unit = {
     logger.info("WriteToMongo: tearing down connection")
+    conn.map(_.close())
+  }
+}
+
+class DeleteFromMongo(
+  override val config: DB.MongoConfig, 
+  override val secret: DB.Secret,
+  cl: String) extends DeleteFromDB with MongoBase {
+
+  override def del(query: Filter): Unit = {
+    createConn(config, secret)
+    conn match {
+      case Some(cn) => cn.getDatabase(config.dbname).getCollection(cl).deleteMany(bsonFilter(query))
+      case _ => logger.warn(s"DeleteFromMongo cannot connect to $config, no records will be deleted")
+    }
+  }
+
+  override def shutdownHook(): Unit = {
+    logger.info("DeleteFromMongo: tearing down connection")
     conn.map(_.close())
   }
 }

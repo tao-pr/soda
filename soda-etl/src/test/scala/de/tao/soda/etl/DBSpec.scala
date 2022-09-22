@@ -10,6 +10,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 import java.sql.ResultSet
 import org.bson.Document
+import org.bson.types.ObjectId
 
 object MySqlUtil {
   def parser(rs: ResultSet): MySqlFoo = {
@@ -44,7 +45,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
   lazy val postgresConfig = DB.PostgreSqlConfig("localhost", 5432, "test", "tbtest")
   lazy val postgresSecret = DB.ParamSecret("thetest", "testpwd")
 
-  lazy val mongoConfig = DB.MongoClientConfig("mongodb://localhost:27010")
+  lazy val mongoConfig = DB.MongoClientConfig("mongodb://localhost:27010", "soda")
   lazy val mongoSecret = DB.ParamSecret("root", "pwd")
 
   it should "read from mysql" in {
@@ -244,26 +245,32 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     import de.tao.soda.etl.data.db.Implicits._
     import scala.collection.JavaConverters._
 
+    // taotodo: how to flush db beforehand?
+
     val dbname = "soda"
     val collection = "col1"
-    val mongoWrite = new WriteToMongo[MongoFoo](mongoConfig, mongoSecret, dbname, collection)
+
+    // Flush DB before test
+    new DeleteFromMongo(mongoConfig, mongoSecret, collection).run(NFilter)
+
+    val mongoWrite = new WriteToMongo[MongoFoo](mongoConfig, mongoSecret, collection)
     lazy val records = List(
-      MongoFoo("name1", 1::2::3::Nil),
-      MongoFoo("name2", Nil),
-      MongoFoo("name3", -1::0::150::22::3::Nil),
-      MongoFoo("box", 100::250::Nil)
+      MongoFoo(new ObjectId, "name1", 1::2::3::Nil),
+      MongoFoo(new ObjectId, "name2", Nil),
+      MongoFoo(new ObjectId, "name3", -1::0::150::22::3::Nil),
+      MongoFoo(new ObjectId, "box", 100::250::Nil)
     )
 
     val outWrite = mongoWrite.run(records)
     assert(outWrite.size == records.size)
 
     // read what we wrote back 
-    implicit val converter = (doc: Document) => MongoFooRead(
-      doc.getObjectId().toString(),
+    implicit val converter = (doc: Document) => MongoFoo(
+      doc.getObjectId(),
       doc.getString("name"),
-      doc.getList[Int]("arr", classOf[Int]).asScala.toList
+      doc.getList[java.lang.Integer]("arr", classOf[java.lang.Integer]).asScala.toList.map(_.toInt)
     )
-    lazy val mongoRead = new ReadFromMongo[Domain.MongoFooRead](mongoConfig, mongoSecret, dbname, collection)
+    lazy val mongoRead = new ReadFromMongo[Domain.MongoFoo](mongoConfig, mongoSecret, collection)
     val outRead = mongoRead.run(Not(Eq("name", "box")))
 
     assert(outRead.size == records.size-1) // box is excluded

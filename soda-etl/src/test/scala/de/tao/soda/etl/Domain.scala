@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
 import java.io.ByteArrayOutputStream
+import org.bson.types.ObjectId
 
 object Domain {
   // For FileSpec, SerializerSpec, WorkflowSpec, WorkSequenceSpec
@@ -38,6 +39,5 @@ object Domain {
 
   case class H2Foo(uuid: String, i: Int, d: Double)
   case class PostgresFoo(uuid: String, s: String, d: Double)
-  case class MongoFoo(name: String, arr: List[Int])
-  case class MongoFooRead(docID: String, name: String, arr: List[Int])
+  case class MongoFoo(_id: ObjectId, name: String, arr: List[Int])
 }

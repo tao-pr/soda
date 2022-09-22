@@ -6,12 +6,15 @@ import com.mongodb.client.MongoClients
 import com.mongodb.MongoClientSettings
 import com.mongodb.connection.ClusterSettings
 import com.mongodb.ServerAddress
+import com.mongodb.MongoCredential
+import com.mongodb.ConnectionString
 
 
 object DB {
   trait Secret {
     def getUser: Option[String]
     def getPwd: Option[String]
+    def asTuple = (getUser, getPwd)
   }
 
   case class EnvSecret(key: String) extends Secret {
@@ -63,15 +66,33 @@ object DB {
   class SqliteConfig extends ConnectionConfig
 
   abstract class MongoConfig extends ConnectionConfig {
-    def createConn: MongoClient
+    val dbname: String
+    def createConn(secret: DB.Secret): MongoClient
   }
 
-  // uri: mongodb://hostname:port/
-  //      mongodb://hostname1:port/,hostname2:port/
-  case class MongoClientConfig(uri: String) extends MongoConfig {
-    override def createConn: MongoClient = MongoClients.create(uri)
+  // connStr: mongodb://hostname:port/
+  //          mongodb://hostname1:port/,hostname2:port/
+  case class MongoClientConfig(connStr: String, override val dbname: String) extends MongoConfig {
+    override def createConn(secret: DB.Secret): MongoClient = {
+      val settingsBuild = MongoClientSettings.builder()
+        .applyToClusterSettings((builder: ClusterSettings.Builder) => 
+          builder.applyConnectionString(new ConnectionString(connStr)))
 
-    override def toString: String = uri
+      val settingsWithCred = secret.asTuple match {
+        case (None, _) => settingsBuild
+        case (Some(usr), pwdOpt) => 
+          val cred = MongoCredential.createCredential(
+            usr, 
+            dbname, 
+            pwdOpt.map(_.toArray).getOrElse(Array.empty)
+          )
+          settingsBuild.credential(cred)
+      }
+
+      MongoClients.create(settingsWithCred.build())
+    }
+
+    override def toString: String = connStr
   }
 
   def caseClassToMap(instance: AnyRef): Map[String, Any] = {
@@ -79,6 +100,19 @@ object DB {
       f.setAccessible(true)
       (f.getName -> f.get(instance))
     }.filterNot(_._1.contains('$')).toMap
+  }
+}
+
+trait DeleteFromDB extends Workflow[Filter, Unit]{
+  def del(query: Filter): Unit
+  
+  val config: DB.ConnectionConfig
+  val secret: DB.Secret
+
+  override def run(input: Filter): Unit = {
+    logger.info(s"${this.getClass().getName()} deleting from storage: $config")
+    val n = del(input)
+    logger.info(s"${this.getClass().getName()} deleted $n records")
   }
 }
 
