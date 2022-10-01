@@ -30,6 +30,12 @@ object PostgresUtil {
   }
 }
 
+object SqliteUtil {
+  def parser(rs: ResultSet): SqliteFoo = {
+    SqliteFoo(rs.getString("uuid"), rs.getString("s"), rs.getInt("u"))
+  }
+}
+
 
 class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
@@ -47,6 +53,9 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
   lazy val mongoConfig = DB.MongoClientConfig("mongodb://localhost:27010", "soda")
   lazy val mongoSecret = DB.ParamSecret("root", "pwd")
+
+  lazy val sqliteConfig = DB.SqliteConfig(Some("soda-sqlite-test"), "tb1")
+  lazy val sqliteSecret = DB.ParamSecret("jdoe", "pwd")
 
   it should "read from mysql" in {
     lazy val query = Eq("name", "melon")
@@ -245,8 +254,6 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     import de.tao.soda.etl.data.db.Implicits._
     import scala.collection.JavaConverters._
 
-    // taotodo: how to flush db beforehand?
-
     val dbname = "soda"
     val collection = "col1"
 
@@ -275,6 +282,33 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     assert(outRead.size == records.size-1) // box is excluded
     assert(outRead.count(_.name.startsWith("name")) == outRead.size)
+  }
+
+  it should "write and read from sqlite" in {
+    val dbname = "dbfoo"
+    val sqlCreateTb =
+      """
+        |DROP TABLE IF EXISTS tb1;
+        |CREATE TABLE tb1(
+        |UUID VARCHAR(36), s VARCHAR(1), u INTEGER);
+        |""".stripMargin
+
+    val sqliteWrite = new WriteToSqlite[SqliteFoo](sqliteConfig, sqliteSecret, Some(sqlCreateTb)) // taotodo;
+
+    val records = List(
+      SqliteFoo(java.util.UUID.randomUUID().toString, "k", 30),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "c", 150),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "e", -1),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "a", 250)
+    )
+    sqliteWrite.run(records)
+
+    // read what we wrote back
+    lazy val sqliteRead = new ReadFromSqlite[SqliteFoo](sqliteConfig, sqliteSecret, SqliteUtil.parser)
+    val out = sqliteRead.run(Gte("u", 0))
+
+    assert(out.size == 3)
+    assert(out.map(_.uuid).toList.sorted == records.filter(_.u >= 0).map(_.uuid).sorted)
   }
 
 }

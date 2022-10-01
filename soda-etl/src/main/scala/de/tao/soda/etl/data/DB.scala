@@ -53,7 +53,7 @@ object DB {
   case class RedisConfig(host: String, port: Int, db: Int=0) extends ConnectionConfig
 
   case class H2Config(path: String, dbname: String, table: String) extends JdbcConnectionConfig {
-    override def url = s"jdbc:h2:${path}/${dbname}"
+    override def url = s"jdbc:h2:${path}/${dbname}" // taotodo: in mem option
     override val className = "org.h2.Driver"
   }
 
@@ -63,7 +63,11 @@ object DB {
     override val quote: Char = '\"'
   }
 
-  class SqliteConfig extends ConnectionConfig
+  case class SqliteConfig(path: Option[String], table: String) extends JdbcConnectionConfig {
+    override def url = s"jdbc:sqlite:${path.getOrElse("memory:")}"
+    override val className = "org.sqlite.JDBC"
+    override val quote: Char = '\"'
+  }
 
   abstract class MongoConfig extends ConnectionConfig {
     val dbname: String
@@ -219,6 +223,11 @@ case class IsIn(field: String, values: Set[Any]) extends Filter {
 case class Like(field: String, value: String) extends Filter {
   override def toSql: String = s"$field like ${Filter.vts(value)}"
   override def clean(quote: Char): Filter = Like(Filter.quote(Filter.esc(field), quote), value)
+}
+
+case class IsNull(field: String) extends Filter {
+  override def toSql: String = s"$field is NULL"
+  override def clean(quote: Char): Filter = IsNull(Filter.quote(Filter.esc(field), quote))
 }
 
 object Filter {

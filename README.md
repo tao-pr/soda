@@ -3,7 +3,7 @@
 Soda is a data API for building typesafe & composable processing pipeline. Soda now supports:
 
 - Read/Write common physical file formats (csv, tsv, json, zipped)
-- Read/Write relational databases : mysql, h2, redis, postgres
+- Read/Write relational databases : mysql, h2, redis, postgres, mongo
 - Event-driven directory watch to trigger pipeline
 - AWS s3 as part of pipeline
 - Serialisation and compression

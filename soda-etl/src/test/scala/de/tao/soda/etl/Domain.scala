@@ -40,4 +40,5 @@ object Domain {
   case class H2Foo(uuid: String, i: Int, d: Double)
   case class PostgresFoo(uuid: String, s: String, d: Double)
   case class MongoFoo(_id: ObjectId, name: String, arr: List[Int])
+  case class SqliteFoo(uuid: String, s: String, u: Int)
 }

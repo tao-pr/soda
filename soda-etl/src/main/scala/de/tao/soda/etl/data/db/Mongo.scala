@@ -38,6 +38,7 @@ trait MongoBase {
     case Between(t, v1, v2) => and(gte(t, v1), lte(t, v2))
     case IsIn(t, vs) => in(t, vs)
     case Like(t, v) => eql(t, v)
+    case IsNull(t) => eql(t, null)
     case _ => new Document()
   }
 

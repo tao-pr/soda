@@ -19,6 +19,7 @@ object Build extends AutoPlugin {
     val h2Version = "1.3.148"
     val postgresVersion = "42.2.16"
     val mongoVersion = "4.3.0"
+    val sqliteVersion = "3.39.3.0"
 
     val jacksonModule = "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
     val logback = "ch.qos.logback" % "logback-classic" % "1.2.11"
@@ -36,6 +37,7 @@ object Build extends AutoPlugin {
     val h2 = "com.h2database" % "h2" % h2Version
     val postgres = "org.postgresql" % "postgresql" % postgresVersion
     val mongo = "org.mongodb" % "mongodb-driver-sync" % mongoVersion
+    val sqlite = "org.xerial" % "sqlite-jdbc" % sqliteVersion
   }
 
   import autoImport._
