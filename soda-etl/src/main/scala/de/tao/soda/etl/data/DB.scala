@@ -52,9 +52,20 @@ object DB {
 
   case class RedisConfig(host: String, port: Int, db: Int=0) extends ConnectionConfig
 
-  case class H2Config(path: String, dbname: String, table: String) extends JdbcConnectionConfig {
-    override def url = s"jdbc:h2:${path}/${dbname}" // taotodo: in mem option
+  abstract class H2Config extends JdbcConnectionConfig {
     override val className = "org.h2.Driver"
+  }
+
+  case class H2FileConfig(path: String, table: String, encrypt: Boolean, zip: Boolean=false) extends H2Config {
+    private val sEncrypt = if (encrypt) ";CIPHER=AES" else ""
+    private val sZip = if (zip) "zip:" else ""
+    override def url = s"jdbc:h2:${zip}${path}${sEncrypt}"
+  }
+
+  // Configure named db if we want to access DB from multiple threads or child processes on the same JVM
+  // http://www.h2database.com/html/features.html#in_memory_databases
+  case class H2MemConfig(namedDb: String, table: String) extends H2Config {
+    override def url = s"jdbc:h2:mem:${namedDb}"
   }
 
   case class PostgreSqlConfig(host: String, port: Int, db: String, table: String) extends JdbcConnectionConfig {
@@ -63,10 +74,19 @@ object DB {
     override val quote: Char = '\"'
   }
 
-  case class SqliteConfig(path: Option[String], table: String) extends JdbcConnectionConfig {
-    override def url = s"jdbc:sqlite:${path.getOrElse("memory:")}"
+  abstract class SqliteConfig extends JdbcConnectionConfig {
     override val className = "org.sqlite.JDBC"
     override val quote: Char = '\"'
+  }
+
+  case class SqliteFileConfig(path: String, table: String) extends SqliteConfig {
+    override def url = s"jdbc:sqlite:${path}"
+  }
+
+  // Configure named db if we want to access DB from multiple threads or child processes on the same JVM
+  // http://www.h2database.com/html/features.html#in_memory_databases
+  case class SqliteMemConfig(namedDb: Option[String], table: String) extends SqliteConfig {
+    override def url = s"jdbc:sqlite::memory:${namedDb.getOrElse("")}"
   }
 
   abstract class MongoConfig extends ConnectionConfig {

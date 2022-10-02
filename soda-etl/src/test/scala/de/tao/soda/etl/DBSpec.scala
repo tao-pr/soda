@@ -45,8 +45,11 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
   lazy val redisConfig = DB.RedisConfig("localhost", 6379, db=0)
   lazy val redisSecret = DB.ParamPwdSecret("testpwd")
 
-  lazy val h2Config = DB.H2Config("./", "soda-h2-test", "tb1")
+  lazy val h2Config = DB.H2FileConfig("soda-h2-test", "tb1", encrypt=false)
   lazy val h2Secret = DB.ParamSecret("jdoe", "testpwd2")
+
+  lazy val h2MemConfig = DB.H2MemConfig(namedDb="db", table="tb0")
+  lazy val h2MemSecret = DB.ParamSecret("jdoe0", "testpwd")
 
   lazy val postgresConfig = DB.PostgreSqlConfig("localhost", 5432, "test", "tbtest")
   lazy val postgresSecret = DB.ParamSecret("thetest", "testpwd")
@@ -54,8 +57,11 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
   lazy val mongoConfig = DB.MongoClientConfig("mongodb://localhost:27010", "soda")
   lazy val mongoSecret = DB.ParamSecret("root", "pwd")
 
-  lazy val sqliteConfig = DB.SqliteConfig(Some("soda-sqlite-test"), "tb1")
+  lazy val sqliteConfig = DB.SqliteFileConfig("soda-sqlite-test", "tb1")
   lazy val sqliteSecret = DB.ParamSecret("jdoe", "pwd")
+
+  lazy val sqliteMemConfig = DB.SqliteMemConfig(namedDb=Some("dba"), table="tb1")
+  lazy val sqliteMemSecret = DB.ParamSecret("jdoe2", "pwd2")
 
   it should "read from mysql" in {
     lazy val query = Eq("name", "melon")
@@ -212,6 +218,33 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
   }
 
+  it should "write and read from H2 (in memory)" in {
+    val sqlCreateTb =
+      """
+        |DROP TABLE tb0 IF EXISTS;
+        |CREATE TABLE tb0(
+        |UUID VARCHAR(36), i INT, d FLOAT);
+        |""".stripMargin
+    lazy val h2write = new WriteToH2[H2Foo](h2MemConfig, h2MemSecret, Some(sqlCreateTb))
+    val records = List(
+      H2Foo(java.util.UUID.randomUUID().toString, 1, 1e-3),
+      H2Foo(java.util.UUID.randomUUID().toString, 2, 1e-6),
+      H2Foo(java.util.UUID.randomUUID().toString, 3, 1e-12),
+      H2Foo(java.util.UUID.randomUUID().toString, 4, 1e24)
+    )
+
+    val ns = h2write.run(records)
+
+    assert(ns == records)
+
+    // try reading back
+    lazy val h2Read = new ReadFromH2[H2Foo](h2MemConfig, h2MemSecret, H2Util.parser)
+    val out = h2Read.run(Between("i", 0, 1e24+1))
+
+    assert(out.size == records.size)
+    assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
+  }
+
   it should "read an iterator from h2" in {
     lazy val h2Read = new ReadIteratorFromH2[H2Foo](h2Config, h2Secret, H2Util.parser)
     val iter = h2Read.run(Gt("i", 0))
@@ -293,7 +326,7 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
         |UUID VARCHAR(36), s VARCHAR(1), u INTEGER);
         |""".stripMargin
 
-    val sqliteWrite = new WriteToSqlite[SqliteFoo](sqliteConfig, sqliteSecret, Some(sqlCreateTb)) // taotodo;
+    val sqliteWrite = new WriteToSqlite[SqliteFoo](sqliteConfig, sqliteSecret, Some(sqlCreateTb))
 
     val records = List(
       SqliteFoo(java.util.UUID.randomUUID().toString, "k", 30),
@@ -309,6 +342,33 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     assert(out.size == 3)
     assert(out.map(_.uuid).toList.sorted == records.filter(_.u >= 0).map(_.uuid).sorted)
+  }
+
+  it should "write and read from sqlite (in-mem)" in {
+    val dbname = "dbfoo"
+    val sqlCreateTb =
+      """
+        |DROP TABLE IF EXISTS tb1;
+        |CREATE TABLE tb1(
+        |UUID VARCHAR(36), s VARCHAR(1), u INTEGER);
+        |""".stripMargin
+
+    val sqliteWrite = new WriteToSqlite[SqliteFoo](sqliteMemConfig, sqliteMemSecret, Some(sqlCreateTb)) 
+
+    val records = List(
+      SqliteFoo(java.util.UUID.randomUUID().toString, "k", 30),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "c", 150),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "e", 10),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "a", 250)
+    )
+    sqliteWrite.run(records)
+
+    // read what we wrote back
+    lazy val sqliteRead = new ReadFromSqlite[SqliteFoo](sqliteMemConfig, sqliteMemSecret, SqliteUtil.parser)
+    val out = sqliteRead.run(Gte("u", 30))
+
+    assert(out.size == 3)
+    assert(out.map(_.uuid).toList.sorted == records.filter(_.u >= 30).map(_.uuid).sorted)
   }
 
 }
