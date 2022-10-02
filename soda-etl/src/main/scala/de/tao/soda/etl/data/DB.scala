@@ -59,7 +59,7 @@ object DB {
   case class H2FileConfig(path: String, table: String, encrypt: Boolean, zip: Boolean=false) extends H2Config {
     private val sEncrypt = if (encrypt) ";CIPHER=AES" else ""
     private val sZip = if (zip) "zip:" else ""
-    override def url = s"jdbc:h2:${zip}${path}${sEncrypt}"
+    override def url = s"jdbc:h2:${sZip}${path}${sEncrypt}"
   }
 
   // Configure named db if we want to access DB from multiple threads or child processes on the same JVM
