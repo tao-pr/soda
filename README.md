@@ -51,6 +51,15 @@ After tests, you can tear down all dependencies by
 Collection of sample runnable workflows are in here (see in soda-cli/main/scala/de/tao/soda/runnable)
 
 
+## PublishLocal
+
+Build and publish JAR to local repository with
+
+```bash
+sbt publishLocal
+# published ivy to /Users/$(whoami)/.ivy2/local/de.tao/soda-etl_2.13/0.0.1/ivys/ivy.xml
+````
+
 ## Licence
 
 MIT
