@@ -4,7 +4,10 @@ import com.redis.RedisClient
 import com.redis.serialization.Parse
 import de.tao.soda.etl.Workflow
 import de.tao.soda.etl.data.DB.RedisConfig
-import de.tao.soda.etl.data.{DB, ReadFromDB, WriteToDB}
+import de.tao.soda.etl.data.{DB, ReadFromDB, WriteToDB, Filter}
+import de.tao.soda.etl.data.NFilter
+import de.tao.soda.etl.data.AndFilter
+import scala.collection.immutable
 
 trait Redis {
   var conn: Option[RedisClient] = None
@@ -15,26 +18,59 @@ trait Redis {
   }
 }
 
+object Redis {
+  type Key = Either[String, (String, String)]
+}
+
+trait RedisFilter extends Filter {
+  override def toSql: String = ???
+  override def clean(quote: Char): Filter = ???
+}
+
+case class MGet(keys: String*) extends RedisFilter
+case class HMGet(key: String, fields: String*) extends RedisFilter
+case class MultiHMGet(gets: HMGet*) extends RedisFilter
+
 class ReadFromRedis[T](
 override val config: RedisConfig,
 override val secret: DB.Secret)
-(implicit val parser: Parse[T]) extends ReadFromDB[(String, String, T)] with Redis {
+(implicit val parser: Parse[T]) extends ReadFromDB[(Redis.Key, Option[T])] with Redis {
 
   // For redis, [[query]] has to be a map of key -> field(s) to read from
   // eg.
   //      Map( "key1" -> "field1", "key2" -> ["field1","field2","field3"]
   //
-  override def read(query: Map[String, Any]): Iterable[(String, String, T)] = {
+  // The output is an iterable of a tuple containing:
+  // - hashmap key (optional)
+  // - field 
+  // - value (None if not found in redis)
+  override def read(query: Filter): Iterable[(Redis.Key, Option[T])] = {
     createConn(config, secret)
     conn.map{ cc =>
-      query.flatten{ case (k,v) =>
-        val fields = if (v.isInstanceOf[Iterable[_]])
-          v.asInstanceOf[Iterable[String]].toSeq
-        else
-          v.toString :: Nil
-        cc.hmget[String, T](k, fields:_*).getOrElse(Map.empty).map{ case (f, _v) => (k, f, _v)}
+      def hmget(key: String, fields: String*): Iterable[(Redis.Key, Option[T])] = {
+        val map: Map[String,T] = cc
+        .hmget[String, T](key, fields:_*)
+        .getOrElse(Map.empty)
+
+        fields.map{ f => (Right((key, f)), map.get(f)) }
       }
-    }.getOrElse(List.empty)
+
+      val res: Iterable[(Redis.Key, Option[T])] = query match {
+        case MGet(keys @_*) => cc
+          .mget[T](keys.head, keys.tail:_*)
+          .map{ vs => keys.zip(vs).map{ case (k,v) => (Left(k), v) } }
+          .getOrElse(Nil)
+
+        case HMGet(key, fields @_*) => hmget(key, fields:_*)
+
+        case MultiHMGet(hs @_*) => hs.flatten{ h =>
+          hmget(h.key, h.fields:_*)
+        }
+
+        case _ => throw new UnsupportedClassVersionError("ReadFromRedis expects query of type RedisFilter")
+      }
+      res
+    }.getOrElse(Nil)
   }
 
   override def shutdownHook(): Unit = {
@@ -62,6 +98,7 @@ class WriteToRedis[T <: AnyRef](
 override val config: RedisConfig,
 override val secret: DB.Secret,
 expireF: (String => Option[Int]) = (_ => None)) extends WriteToDB[(String, String, T)] with Redis {
+  // taotodo: writeToDB[(Redis.Key, T)] instead ^^
 
   // [[data]] has to be a tuple of (key -> field -> value)
   override def write(data: Iterable[(String, String, T)]): Iterable[(String, String, T)] = {

@@ -1,13 +1,16 @@
 package de.tao.soda.etl
 
 import com.redis.serialization.Parse
-import de.tao.soda.etl.Domain.{H2Foo, MySqlFoo, PostgresFoo, RedisFoo}
+import de.tao.soda.etl.Domain._
 import de.tao.soda.etl.data.DB
 import de.tao.soda.etl.data.db._
+import de.tao.soda.etl.data._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.sql.ResultSet
+import org.bson.Document
+import org.bson.types.ObjectId
 
 object MySqlUtil {
   def parser(rs: ResultSet): MySqlFoo = {
@@ -27,6 +30,12 @@ object PostgresUtil {
   }
 }
 
+object SqliteUtil {
+  def parser(rs: ResultSet): SqliteFoo = {
+    SqliteFoo(rs.getString("uuid"), rs.getString("s"), rs.getInt("u"))
+  }
+}
+
 
 class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
@@ -36,14 +45,26 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
   lazy val redisConfig = DB.RedisConfig("localhost", 6379, db=0)
   lazy val redisSecret = DB.ParamPwdSecret("testpwd")
 
-  lazy val h2Config = DB.H2Config("./", "soda-h2-test", "tb1")
-  lazy val h2Secret = DB.ParamPwdSecret("testpwd")
+  lazy val h2Config = DB.H2FileConfig("soda-h2-test", "tb1", encrypt=false)
+  lazy val h2Secret = DB.ParamSecret("jdoe", "testpwd2")
+
+  lazy val h2MemConfig = DB.H2MemConfig(namedDb="db", table="tb0")
+  lazy val h2MemSecret = DB.ParamSecret("jdoe0", "testpwd")
 
   lazy val postgresConfig = DB.PostgreSqlConfig("localhost", 5432, "test", "tbtest")
   lazy val postgresSecret = DB.ParamSecret("thetest", "testpwd")
 
+  lazy val mongoConfig = DB.MongoClientConfig("mongodb://localhost:27010", "soda")
+  lazy val mongoSecret = DB.ParamSecret("root", "pwd")
+
+  lazy val sqliteConfig = DB.SqliteFileConfig("soda-sqlite-test", "tb1")
+  lazy val sqliteSecret = DB.ParamSecret("jdoe", "pwd")
+
+  lazy val sqliteMemConfig = DB.SqliteMemConfig(namedDb=Some("dba"), table="tb1")
+  lazy val sqliteMemSecret = DB.ParamSecret("jdoe2", "pwd2")
+
   it should "read from mysql" in {
-    lazy val query = Map[String, Any]("name" -> "='melon'")
+    lazy val query = Eq("name", "melon")
     lazy val mysqlRead = new ReadFromMySql[MySqlFoo](mysqlConfig, mysqlSecret, MySqlUtil.parser)
 
     val out = mysqlRead.run(query)
@@ -70,14 +91,14 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     // test query back
     lazy val mysqlRead = new ReadFromMySql[MySqlFoo](mysqlConfig, mysqlSecret, MySqlUtil.parser)
-    val out = mysqlRead.run(Map[String, Any]("name" -> "LIKE 'name-%'"))
+    val out = mysqlRead.run(Like("name", "name-%"))
 
     assert(out.size == records.size)
   }
 
   it should "read an iterator from mysql" in {
     lazy val mysqlRead = new ReadIteratorFromMySql[MySqlFoo](mysqlConfig, mysqlSecret, MySqlUtil.parser)
-    val iter = mysqlRead.run(Map[String, Any]("name" -> "LIKE 'name-%'"))
+    val iter = mysqlRead.run(Like("name", "name-%"))
 
     assert(iter.isInstanceOf[Iterator[_]])
     var nameSet = (1 to 5).map(s => s"name-$s").toSet
@@ -112,13 +133,22 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     // test query back
     lazy val redisRead = new ReadFromRedis[RedisFoo](redisConfig, redisSecret)
-    val queryMap = Map("key1" -> List("field1","field2"), "key2" -> List("field1", "field2", "field3"))
+    val queryMap = MultiHMGet(
+      HMGet("key1", "field1", "field2"),
+      HMGet("key2", "field1", "field2", "field3")
+    )
     val out = redisRead.run(queryMap).toList
 
     assert(out.size == records.size)
 
-    val outStr = out.map{ case (k,v,f) => s"$k, $v, $f"}
-    val expStr = records.map{ case (k,v,f) => s"$k, $v, $f"}
+    val redisKeyToStr = (k: Redis.Key) => k match {
+      case Left(key) => key
+      case Right((key,field)) => s"$key, $field" // this one should match expectation
+    }
+
+    val outStr = out.map{ case (k,v) => s"${redisKeyToStr(k)}"}
+    val expStr = records.map{ case (k,f,v) => s"$k, $f"}
+
     assert(expStr.forall(outStr.contains(_)))
 
     // test expire
@@ -131,10 +161,34 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
     implicit val parser = new Parse[RedisFoo](f = RedisFoo.fromBytes)
 
     lazy val redisRead = new ReadFromRedis[RedisFoo](redisConfig, redisSecret)
-    val queryMap = Map("key1" -> List("field1","field2"), "key2" -> List("field1", "field2", "field3", "notexist", "key3" -> List("notexist")))
+    val queryMap = MultiHMGet(
+      HMGet("key1", "field1", "field2"),
+      HMGet("key2", "field1", "field2", "field3", "notexist"),
+      HMGet("key3", "notexist")
+    )
+
+    /**
+     * (Right((key1,field1)),None), 
+      (Right((key1,field2)),None), 
+      (Right((key2,field1)),Some({"uuid":"d8fb31be-4feb-44c2-99ac-b772f183f4df","name":"name3","code":200,"arr":[1,2,3]})), 
+      (Right((key2,field2)),Some({"uuid":"6d85b3fe-f5e4-4157-99f7-c34f33be83e3","name":"name2","code":300,"arr":[1,2,3,4,5]})), 
+      (Right((key2,field3)),Some({"uuid":"4109f549-4cb0-4520-aedc-5c56b1646c7f","name":"name3","code":200,"arr":[1]})), 
+      (Right((key2,notexist)),None), 
+      (Right((key3,notexist)),None))
+    */
+
     val out = redisRead.run(queryMap).toList
 
-    assert(out.size == 3) // NOTE: key1 already expired earlier
+    assert(out.size == 7)
+    assert(out.count{ n => n match {
+      case (Right((k,f)), v) if k=="key1" && v.isEmpty => true
+      case _ => false
+    }} == 2) // all key1 expired earlier
+
+    assert(out.count{ n => n match {
+      case (Right((k,f)), v) if k=="key2" && v.nonEmpty => true
+      case _ => false
+    }} == 3) // all key2 filled with values
   }
 
   it should "write and read from H2" in {
@@ -158,15 +212,42 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     // try reading back
     lazy val h2Read = new ReadFromH2[H2Foo](h2Config, h2Secret, H2Util.parser)
-    val out = h2Read.run(Map("i" -> ">0"))
+    val out = h2Read.run(Gt("i", 0))
+
+    assert(out.size == records.size)
+    assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
+  }
+
+  it should "write and read from H2 (in memory)" in {
+    val sqlCreateTb =
+      """
+        |DROP TABLE tb0 IF EXISTS;
+        |CREATE TABLE tb0(
+        |UUID VARCHAR(36), i INT, d FLOAT);
+        |""".stripMargin
+    lazy val h2write = new WriteToH2[H2Foo](h2MemConfig, h2MemSecret, Some(sqlCreateTb))
+    val records = List(
+      H2Foo(java.util.UUID.randomUUID().toString, 1, 1e-3),
+      H2Foo(java.util.UUID.randomUUID().toString, 2, 1e-6),
+      H2Foo(java.util.UUID.randomUUID().toString, 3, 1e-12),
+      H2Foo(java.util.UUID.randomUUID().toString, 4, 1e24)
+    )
+
+    val ns = h2write.run(records)
+
+    assert(ns == records)
+
+    // try reading back
+    lazy val h2Read = new ReadFromH2[H2Foo](h2MemConfig, h2MemSecret, H2Util.parser)
+    val out = h2Read.run(Between("i", 0, 1e24+1))
 
     assert(out.size == records.size)
     assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
   }
 
   it should "read an iterator from h2" in {
-    lazy val h2Read = new ReadIteratorFromH2[H2Foo](h2Config, mysqlSecret, H2Util.parser)
-    val iter = h2Read.run(Map[String, Any]("i" -> ">0"))
+    lazy val h2Read = new ReadIteratorFromH2[H2Foo](h2Config, h2Secret, H2Util.parser)
+    val iter = h2Read.run(Gt("i", 0))
 
     assert(iter.isInstanceOf[Iterator[_]])
     var idSet = (1 to 5).toSet
@@ -196,10 +277,98 @@ class DBSpec extends AnyFlatSpec with BeforeAndAfterAll {
 
     // try reading back
     lazy val postRead = new ReadFromPosgreSql[PostgresFoo](postgresConfig, postgresSecret, PostgresUtil.parser)
-    val out = postRead.run(Map("d" -> ">0"))
+    val out = postRead.run(Gt("d", 0))
 
     assert(out.size == records.size)
     assert(out.map(_.uuid).toList.sorted == records.map(_.uuid).sorted)
+  }
+
+  it should "write and read from mongo" in {
+    import de.tao.soda.etl.data.db.Implicits._
+    import scala.collection.JavaConverters._
+
+    val dbname = "soda"
+    val collection = "col1"
+
+    // Flush DB before test
+    new DeleteFromMongo(mongoConfig, mongoSecret, collection).run(NFilter)
+
+    val mongoWrite = new WriteToMongo[MongoFoo](mongoConfig, mongoSecret, collection)
+    lazy val records = List(
+      MongoFoo(new ObjectId, "name1", 1::2::3::Nil),
+      MongoFoo(new ObjectId, "name2", Nil),
+      MongoFoo(new ObjectId, "name3", -1::0::150::22::3::Nil),
+      MongoFoo(new ObjectId, "box", 100::250::Nil)
+    )
+
+    val outWrite = mongoWrite.run(records)
+    assert(outWrite.size == records.size)
+
+    // read what we wrote back 
+    implicit val converter = (doc: Document) => MongoFoo(
+      doc.getObjectId(),
+      doc.getString("name"),
+      doc.getList[java.lang.Integer]("arr", classOf[java.lang.Integer]).asScala.toList.map(_.toInt)
+    )
+    lazy val mongoRead = new ReadFromMongo[Domain.MongoFoo](mongoConfig, mongoSecret, collection)
+    val outRead = mongoRead.run(Not(Eq("name", "box")))
+
+    assert(outRead.size == records.size-1) // box is excluded
+    assert(outRead.count(_.name.startsWith("name")) == outRead.size)
+  }
+
+  it should "write and read from sqlite" in {
+    val dbname = "dbfoo"
+    val sqlCreateTb =
+      """
+        |DROP TABLE IF EXISTS tb1;
+        |CREATE TABLE tb1(
+        |UUID VARCHAR(36), s VARCHAR(1), u INTEGER);
+        |""".stripMargin
+
+    val sqliteWrite = new WriteToSqlite[SqliteFoo](sqliteConfig, sqliteSecret, Some(sqlCreateTb))
+
+    val records = List(
+      SqliteFoo(java.util.UUID.randomUUID().toString, "k", 30),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "c", 150),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "e", -1),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "a", 250)
+    )
+    sqliteWrite.run(records)
+
+    // read what we wrote back
+    lazy val sqliteRead = new ReadFromSqlite[SqliteFoo](sqliteConfig, sqliteSecret, SqliteUtil.parser)
+    val out = sqliteRead.run(Gte("u", 0))
+
+    assert(out.size == 3)
+    assert(out.map(_.uuid).toList.sorted == records.filter(_.u >= 0).map(_.uuid).sorted)
+  }
+
+  it should "write and read from sqlite (in-mem)" in {
+    val dbname = "dbfoo"
+    val sqlCreateTb =
+      """
+        |DROP TABLE IF EXISTS tb1;
+        |CREATE TABLE tb1(
+        |UUID VARCHAR(36), s VARCHAR(1), u INTEGER);
+        |""".stripMargin
+
+    val sqliteWrite = new WriteToSqlite[SqliteFoo](sqliteMemConfig, sqliteMemSecret, Some(sqlCreateTb)) 
+
+    val records = List(
+      SqliteFoo(java.util.UUID.randomUUID().toString, "k", 30),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "c", 150),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "e", 10),
+      SqliteFoo(java.util.UUID.randomUUID().toString, "a", 250)
+    )
+    sqliteWrite.run(records)
+
+    // read what we wrote back
+    lazy val sqliteRead = new ReadFromSqlite[SqliteFoo](sqliteMemConfig, sqliteMemSecret, SqliteUtil.parser)
+    val out = sqliteRead.run(Gte("u", 30))
+
+    assert(out.size == 3)
+    assert(out.map(_.uuid).toList.sorted == records.filter(_.u >= 30).map(_.uuid).sorted)
   }
 
 }

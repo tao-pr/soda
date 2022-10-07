@@ -1,9 +1,10 @@
 package de.tao.soda.etl.data.db
 
-import de.tao.soda.etl.data.DB
+import de.tao.soda.etl.data.{DB, Filter}
 
 import java.sql.{Connection, DriverManager, ResultSet, Statement}
 import scala.collection.mutable.ArrayBuffer
+import de.tao.soda.etl.data.NFilter
 
 trait Jdbc {
   def connection(config: DB.JdbcConnectionConfig, secret: DB.Secret): Connection = {
@@ -14,10 +15,12 @@ trait Jdbc {
   protected var conn: Option[Connection] = None
 
   // todo: use param of statement instead https://stackoverflow.com/questions/12745186/passing-parameters-to-a-jdbc-preparedstatement
-  protected def makeSelect[T](query: Map[String, Any], config: DB.JdbcConnectionConfig, secret: DB.Secret, forIter: Boolean=false): (Statement, String) = {
+  protected def makeSelect[T](query: Filter, config: DB.JdbcConnectionConfig, secret: DB.Secret, forIter: Boolean=false): (Statement, String) = {
     val quote = config.quote
-    val cond = if (query.isEmpty) ""
-    else " WHERE " + query.map { case (k, v) => s"$quote$k$quote $v" }.mkString(" and ")
+    val cond = query match {
+      case NFilter => ""
+      case filter => s"WHERE ${query.clean(config.quote).toSql}"
+    }
 
     if (conn.isEmpty)
       conn = Some(connection(config, secret))
@@ -28,7 +31,7 @@ trait Jdbc {
     (smt, s"SELECT * FROM ${config.table} ${cond}")
   }
 
-  protected def readTable[T](query: Map[String, Any], config: DB.JdbcConnectionConfig, secret: DB.Secret, parser: (ResultSet => T)): Iterable[T] = {
+  protected def readTable[T](query: Filter, config: DB.JdbcConnectionConfig, secret: DB.Secret, parser: (ResultSet => T)): Iterable[T] = {
     val (smt, sql) = makeSelect[T](query, config, secret)
     val rs = smt.executeQuery(sql)
     val arr = new ArrayBuffer[T]
@@ -38,7 +41,7 @@ trait Jdbc {
     arr
   }
 
-  protected def readTableAsIterator[T](query: Map[String, Any], config: DB.JdbcConnectionConfig, secret: DB.Secret, parser: (ResultSet => T)): Iterator[T] = {
+  protected def readTableAsIterator[T](query: Filter, config: DB.JdbcConnectionConfig, secret: DB.Secret, parser: (ResultSet => T)): Iterator[T] = {
     val (smt, sql) = makeSelect[T](query, config, secret, forIter=true)
     val rs = smt.executeQuery(sql)
     new JdbcRecordIterator[T](rs, parser)
@@ -58,7 +61,12 @@ trait Jdbc {
         val fieldMap = DB.caseClassToMap(rec)
         // todo: use statement value instead
         val valueMap = fieldMap.map { case (_, v) => if (v.isInstanceOf[String]) s"'$v'" else v.toString }
-        val sql = s"INSERT INTO $quote${config.table}$quote (${fieldMap.keys.map(k => s"$quote${k}$quote").mkString(",")}) VALUES (${valueMap.mkString(",")})"
+        val sql = s"""
+          INSERT INTO $quote${config.table}$quote 
+          (${fieldMap.keys.map(k => s"$quote${k}$quote").mkString(",")}) 
+          VALUES (${valueMap.mkString(",")})
+        """.stripMargin
+
         smt.executeUpdate(sql)
       }.sum
 

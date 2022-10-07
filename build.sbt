@@ -11,6 +11,10 @@ import sbt._
 scalaVersion := "2.13.8"
 sbtVersion := "1.6.2"
 
+ThisBuild / organization := "de.tao"
+ThisBuild / version := "0.0.1"
+name := "soda"
+
 lazy val root = Project("soda", file("."))
   .settings(
     publish := {},
@@ -47,7 +51,9 @@ lazy val `soda-etl` = project.in(file("soda-etl"))
       mysql,
       redis,
       h2,
-      postgres
+      postgres,
+      mongo,
+      sqlite
     )
   )
 

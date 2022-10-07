@@ -3,6 +3,7 @@ package de.tao.soda.etl.data.db
 import de.tao.soda.etl.data.{DB, ReadFromDB, ReadIteratorFromDB, WriteToDB}
 
 import java.sql.ResultSet
+import de.tao.soda.etl.data.Filter
 
 
 class ReadFromMySql[T](
@@ -10,7 +11,7 @@ override val config: DB.MySqlConfig,
 override val secret: DB.Secret,
 parser: (ResultSet => T)) extends ReadFromDB[T] with Jdbc {
 
-  override def read(query: Map[String, Any]): Iterable[T] = {
+  override def read(query: Filter): Iterable[T] = {
     readTable[T](query, config, secret, parser)
   }
 
@@ -25,7 +26,7 @@ override val config: DB.MySqlConfig,
 override val secret: DB.Secret,
 parser: (ResultSet => T)) extends ReadIteratorFromDB[T] with Jdbc {
 
-  override def read(query: Map[String, Any]): Iterator[T] = {
+  override def read(query: Filter): Iterator[T] = {
     readTableAsIterator(query, config, secret, parser)
   }
 

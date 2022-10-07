@@ -3,7 +3,7 @@
 Soda is a data API for building typesafe & composable processing pipeline. Soda now supports:
 
 - Read/Write common physical file formats (csv, tsv, json, zipped)
-- Read/Write relational databases : mysql, h2, redis, postgres
+- Read/Write relational databases : mysql, h2, redis, postgres, mongo
 - Event-driven directory watch to trigger pipeline
 - AWS s3 as part of pipeline
 - Serialisation and compression
@@ -51,10 +51,15 @@ After tests, you can tear down all dependencies by
 Collection of sample runnable workflows are in here (see in soda-cli/main/scala/de/tao/soda/runnable)
 
 
-## Getting started
+## PublishLocal
 
-TBD
+Build and publish JAR to local repository with
+
+```bash
+sbt publishLocal
+# published ivy to /Users/$(whoami)/.ivy2/local/de.tao/soda-etl_2.13/0.0.1/ivys/ivy.xml
+````
 
 ## Licence
 
-TBD
+MIT

@@ -1,24 +1,18 @@
 #!/bin/bash
 
-echo "Terminating mysql-soda-test"
+echo "Terminating test instances ..."
 
-# shellcheck disable=SC2046
-idmysql=$(docker ps -a -q --filter name=mysql-soda-test)
-if [ -z "$idmysql" ];
-then
-  echo ".. no mysql instance running, ignoring"
-else
-  docker rm "$(docker container stop "$idmysql")"
+declare -a instances=("mysql-soda-test" "redis-soda-test" "mongo-soda-test" "postgres-soda-test")
+
+for ins in ${instances[@]}; do
+  # shellcheck disable=SC2046
+  id=$(docker ps -a -q --filter name=$ins)
+  if [ -z "$id" ];
+  then
+    echo ".. no $ins instance running, ignoring"
+  else
+    docker rm "$(docker container stop "$id")"
 fi
-
-# shellcheck disable=SC2046
-idredis=$(docker ps -a -q --filter name=redis-soda-test)
-if [ -z "$idredis" ];
-then
-  echo ".. no redis instance running, ignoring"
-else
-  docker rm "$(docker container stop "$idredis")"
-fi
-
+done
 
 echo "[DONE]"
