@@ -51,10 +51,6 @@ After tests, you can tear down all dependencies by
 Collection of sample runnable workflows are in here (see in soda-cli/main/scala/de/tao/soda/runnable)
 
 
-## Getting started
-
-TBD
-
 ## Licence
 
 MIT
